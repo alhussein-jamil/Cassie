@@ -384,16 +384,12 @@ config = {
     "disable_env_checking": True,
     "num_gpus_per_worker": 0,
     "num_cpus_per_worker": 1,
-    "evalutation":{
-      "evaluation_interval": 2,# rllib default,
-      "evaluation_duration": 5 ,# rllib default,
-      "evaluation_duration_unit": "episodes", # rllib default
-      "evaluation_sample_timeout_s": 300.0 ,# rllib default
-      "evaluation_parallel_to_training": False, # rllib default
-      "off_policy_estimation_methods" : {}, # rllib default
-      "ope_split_batch_by_episode" : True ,# rllib default
-      "evaluation_num_workers" : 1 ,# rllib default
-      "always_attach_evaluation_results" : False # rllib default
+    # Evaluation parameters
+    "evaluation_interval": 10,
+    "evaluation_num_episodes": 10,
+    "evaluation_config": {
+        "env": "cassie-v0",
+        "seed": 1234,
 
     }
 
