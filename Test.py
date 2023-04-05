@@ -5,82 +5,25 @@ import gymnasium as gym
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from gymnasium.spaces  import Box
 import torch
-import os 
-import cv2 
-import ray
 
-from ray.rllib.agents.ppo import PPOTrainer
-import tensorflow as tf
-
-import tensorboard
-import cv2
-import os
-import torch
-import ray
-from ray.rllib.algorithms.ppo.ppo_torch_policy import PPOTorchPolicy
-
-from ray.rllib.models.torch.misc import normc_initializer
-import torch.nn as nn 
-from typing import Dict, List, Type, Union
-from ray.rllib.models.modelv2 import ModelV2
-import logging
-from typing import Dict, List, Type, Union
-
-import ray
-from ray.rllib.algorithms.ppo.ppo_tf_policy import validate_config
-from ray.rllib.evaluation.postprocessing import (
-    Postprocessing,
-    compute_gae_for_sample_batch,
-)
-
-from ray.rllib.models.modelv2 import ModelV2
-from ray.rllib.policy.sample_batch import SampleBatch
-
-
-from ray.rllib.utils.typing import TensorType
-PPOloss = PPOTorchPolicy.loss
-
-import scipy.stats as stats
-
-
-
-#names of the sensors and number of readings for each 
-sensor_names = ['left-foot-input','left-foot-output','left-hip-pitch-input','left-hip-roll-input','left-hip-yaw-input','left-knee-input','left-shin-output','left-tarsus-output','pelvis-angular-velocity','pelvis-linear-acceleration','pelvis-magnetometer','pelvis-orientation','right-foot-input','right-foot-output','right-hip-pitch-input','right-hip-roll-input','right-hip-yaw-input','right-knee-input','right-shin-output','right-tarsus-output']
-sensor_sizes = [1,1,1,1,1,1,1,1,3,3,3,4,1,1,1,1,1,1,1,1]
-def p_between_von_mises(a, b, kappa, x):
-    # Calculate the CDF values for A and B at x
-    cdf_a = stats.vonmises.cdf(2*np.pi*x, kappa, loc=2*np.pi*a)
-    cdf_b = stats.vonmises.cdf(2*np.pi*x, kappa, loc=2*np.pi*b)
-    
-    # Calculate the probability of A < x < B
-    p_between = np.abs(cdf_b - cdf_a)
-    
-    return p_between
-#First we need to define the environment
-
-#First we need to define the environment
-
-#The constants are defined here
 THETA_LEFT = 0.5
 THETA_RIGHT = 0
 MAX_STEPS = 300 
 OMEGA = 1 
-STEPS_IN_CYCLE= 50 
+STEPS_IN_CYCLE= 30 
 a_swing = 0 
 b_swing = 0.5
 a_stance = 0.5
 b_stance = 1
 FORWARD_QUARTERNIONS = np.array([1, 0, 0, 0])
-KAPPA = 25
-X_VEL = 0.2
-Y_VEL = 0
+KAPPA = 8 
+X_VEL = 0.5
 Z_VEL = 0
 c_swing_frc = -1 
 c_stance_frc = 0
 c_swing_spd = 0
 c_stance_spd = -1
 
-#The camera configuration
 DEFAULT_CAMERA_CONFIG = {
     "trackbodyid": 0,  # use the body id of Cassie
     "distance": 4.0,
@@ -90,7 +33,6 @@ DEFAULT_CAMERA_CONFIG = {
 
 
 
-#The environment class
 class CassieEnv(MujocoEnv):
     metadata = {
         "render_modes": [
@@ -104,6 +46,60 @@ class CassieEnv(MujocoEnv):
 
 
 
+    def vm_cdf(self,x, mu, kappa, num_points=1000):
+        """Computes the CDF of the von Mises distribution.
+
+        Parameters:
+        x (float or array-like): Value(s) at which to evaluate the CDF.
+        mu (float): Mean parameter of the von Mises distribution.
+        kappa (float): Concentration parameter of the von Mises distribution.
+        num_points (int, optional): Number of points to use in the numerical integration. Default is 1000.
+
+        Returns:
+        float or array-like: The CDF of the von Mises distribution evaluated at `x`.
+        """
+        
+        def besseli0(x):
+            """Approximation of the Bessel I0 function."""
+            ax = np.abs(x)
+            if ax < 3.75:
+                y = x / 3.75
+                y2 = y ** 2
+                return 1.0 + y2 * (3.5156229 + y2 * (3.0899424 + y2 * (1.2067492 + y2 * (0.2659732 + y2 * (0.0360768 + y2 * 0.0045813)))))
+            else:
+                y = 3.75 / ax
+                return (np.exp(ax) / np.sqrt(ax)) * (0.39894228 + y * (0.01328592 + y * (0.00225319 + y * (-0.00157565 + y * (0.00916281 + y * (-0.02057706 + y * (0.02635537 + y * (-0.01647633 + y * 0.00392377))))))))
+
+        def integrand(t):
+            return np.exp(kappa * np.cos(t - mu)) / besseli0(kappa)
+
+        if isinstance(x, (int, float)):
+            # Compute the numerical integral using the trapezoidal rule
+            xvals = np.linspace(-np.pi, x, num_points)
+            yvals = integrand(xvals)
+            integral = np.trapz(yvals, xvals)
+
+            # Compute the normalization constant
+            zvals = integrand(np.linspace(-np.pi, np.pi, num_points))
+            normalization = np.trapz(zvals, np.linspace(-np.pi, np.pi, num_points))
+
+            # Return the CDF
+            return integral / normalization
+        else:
+            cdf_values = []
+            for xi in x:
+                # Compute the numerical integral using the trapezoidal rule
+                xvals = np.linspace(-np.pi, xi, num_points)
+                yvals = integrand(xvals)
+                integral = np.trapz(yvals, xvals)
+
+                # Compute the normalization constant
+                zvals = integrand(np.linspace(-np.pi, np.pi, num_points))
+                normalization = np.trapz(zvals, np.linspace(-np.pi, np.pi, num_points))
+
+                # Append the CDF value to the list
+                cdf_values.append(integral / normalization)
+            return np.array(cdf_values)
 
     def __init__(self,config,  **kwargs):
         utils.EzPickle.__init__(self, config, **kwargs)
@@ -112,7 +108,15 @@ class CassieEnv(MujocoEnv):
         self._ctrl_cost_weight = config.get("ctrl_cost_weight", 0.1)
         self._healthy_reward = config.get("healthy_reward", 5.0)
         self._terminate_when_unhealthy = config.get("terminate_when_unhealthy", True)
-        self._healthy_z_range = config.get("healthy_z_range", (0.3, 2.0))
+        self._healthy_z_range = config.get("healthy_z_range", (0.5, 2.0))
+        # Set camera configuration
+        camera_config = DEFAULT_CAMERA_CONFIG.copy()
+        camera_config["trackbodyid"] = 0  # use the body id of Cassie
+        camera_config["distance"] = 4.0
+        camera_config["elevation"] = -20.0
+
+
+
         actuator_ranges = {
             'left-hip-roll': [-4.5, 4.5],
             'left-hip-yaw': [-4.5, 4.5],
@@ -136,8 +140,8 @@ class CassieEnv(MujocoEnv):
         self.steps =0
         self.previous_action = np.zeros (10)
         observation_space = Box(low=-np.inf, high=np.inf, shape=(31,), dtype=np.float64)
-        MujocoEnv.__init__(self, config.get("model_path","cassie.xml") ,20,render_mode=config.get("render_mode",None), observation_space=observation_space,  **kwargs)
-        #set the camera settings to match the DEFAULT_CAMERA_CONFIG we defined above
+        MujocoEnv.__init__(self, config.get("model_path","cassie.xml") ,20,render_mode=config.get("render_mode",None), observation_space=observation_space, **kwargs)
+        # Set the lookat position to the robot's body position
 
 
     @property
@@ -156,9 +160,29 @@ class CassieEnv(MujocoEnv):
         terminated = (not self.is_healthy) if (self._terminate_when_unhealthy or self.steps>MAX_STEPS)  else False
         return terminated
     def _get_obs(self):
-
-
-        p =np.array ([np.sin((2*np.pi*(self.phi))),np.sin((2*np.pi*(self.phi+0.25)))])
+        '''The sensor data are the following 
+        left-foot-input [-2.20025499]
+        left-foot-output [-0.0440051]
+        left-hip-pitch-input [0.03050987]
+        left-hip-roll-input [0.2013339]
+        left-hip-yaw-input [0.30352121]
+        left-knee-input [-12.57921603]
+        left-shin-output [-0.00254359]
+        left-tarsus-output [1.01621498]
+        pelvis-angular-velocity [-0.66091646  0.09304743 -0.14707221]
+        pelvis-linear-acceleration [  0.18789681 -11.51133484  -0.64882624]
+        pelvis-magnetometer [ 3.71266894e-04 -4.99997057e-01 -1.67494055e-03]
+        pelvis-orientation [ 9.99998508e-01 -1.67501875e-03  2.04083784e-04 -3.70925603e-04]
+        right-foot-input [-2.18139208]
+        right-foot-output [-0.04362784]
+        right-hip-pitch-input [0.00453772]
+        right-hip-roll-input [0.12788968]
+        right-hip-yaw-input [0.08293241]
+        right-knee-input [-12.53914917]
+        right-shin-output [-0.00094644]
+        right-tarsus-output [1.01240756]    
+        '''
+        p =np.array ([np.sin((2*np.pi*(self.phi+THETA_LEFT))/STEPS_IN_CYCLE),np.sin((2*np.pi*(self.phi+THETA_RIGHT))/STEPS_IN_CYCLE)])
 
         #getting the read positions of the sensors and concatenate the lists
         return np.concatenate([self.data.sensordata,p])
@@ -175,7 +199,7 @@ class CassieEnv(MujocoEnv):
         #Phase ratios and clock inputs
 
         #p = {sin(2pi(phi+theta_left)/L),sin(2pi(phi+theta_right)/L)} where L is the number of timesteps in each period
-        p = (np.sin((2*np.pi*(self.phi+THETA_LEFT))),np.sin((2*np.pi*(self.phi+THETA_RIGHT))))
+        p = (np.sin((2*np.pi*(self.phi+THETA_LEFT))/STEPS_IN_CYCLE),np.sin((2*np.pi*(self.phi+THETA_RIGHT))/STEPS_IN_CYCLE))
         '''
 		Position [1], [2] 				-> Pelvis y, z
 				 [3], [4], [5], [6] 	-> Pelvis Orientation qw, qx, qy, qz
@@ -209,7 +233,11 @@ class CassieEnv(MujocoEnv):
         vel_index = np.array([0,1,2,3,4,5,6,7,8,12,13,14,18,19,20,21,25,26,27,31])
         return np.concatenate([qpos[pos_index], qvel[vel_index],[p[0],p[1]]])
     
-    #computes the reward
+
+    def von_mises(a,kappa,phi ):
+        vm = torch.distributions.von_mises(a,kappa)
+        return vm.cdf(phi)
+    
     def compute_reward(self,action):
 
         # Extract some proxies
@@ -229,53 +257,77 @@ class CassieEnv(MujocoEnv):
         m.mj_contactForce(self.model,self.data,1,contact_force_left_foot)
 
 
-        #Some metrics to be used in the reward function
-        q_vx = 1-np.exp(-2*OMEGA*np.linalg.norm(np.array([qvel[0]]) - np.array([X_VEL]))**2)
-        q_vy = 1-np.exp(-2*OMEGA*np.linalg.norm(np.array([qvel[1]]) - np.array([Y_VEL]))**2)
-        q_vz = 1-np.exp(-2*OMEGA*np.linalg.norm(np.array([qvel[2]]) - np.array([Z_VEL]))**2)
+        # Update previous position
 
-        q_left_frc = 1.0 - np.exp(-OMEGA * np.linalg.norm(contact_force_left_foot)/400)
-        q_right_frc = 1.0 - np.exp(-OMEGA * np.linalg.norm(contact_force_right_foot)/400)
+        ######## Odometry xy reward ########
+        q_vx = 1-np.exp(-2*OMEGA*np.linalg.norm(np.array([qvel[0]]) - np.array([X_VEL]))**2)
+        ################
+
+        ######## Odometry xy reward ########
+        q_vy = 1-np.exp(-2*OMEGA*np.linalg.norm(np.array([qvel[2]]) - np.array([Z_VEL]))**2)
+        ################
+
+        q_left_frc = 1.0 - np.exp(-OMEGA * np.linalg.norm(contact_force_left_foot)**2/4000)
+        q_right_frc = 1.0 - np.exp(-OMEGA * np.linalg.norm(contact_force_right_foot)**2/4000)
         q_left_spd = 1.0 - np.exp(-OMEGA * np.linalg.norm(qvel[12])**2)
         q_right_spd = 1.0 - np.exp(-OMEGA * np.linalg.norm(qvel[19])**2)
         
-        q_action_diff = 1 - np.exp(-np.linalg.norm(action-self.previous_action)/10)
+
+        q_action_diff = 1 - np.exp(-5*np.linalg.norm(action-self.previous_action))
         q_orientation = 1 -np.exp(-3*(1-((self.data.sensor('pelvis-orientation').data.T)@(FORWARD_QUARTERNIONS))**2))
         q_torque = 1 - np.exp(-0.05*np.linalg.norm(action))
         q_pelvis_acc = 1 - np.exp(-0.10*(np.linalg.norm(self.data.sensor('pelvis-angular-velocity').data) + np.linalg.norm(self.data.sensor('pelvis-linear-acceleration').data)))
         
 
-        #Responsable for the swing and stance phase
-        I = lambda phi,a,b : p_between_von_mises(a,b,KAPPA,phi)
+        I = lambda phi,a,b : self.vm_cdf(phi,a,KAPPA)*(1-self.vm_cdf(phi,b,KAPPA))
 
         I_swing_frc = lambda phi : I(phi,a_swing,b_swing)
         I_swing_spd = lambda phi : I(phi, a_swing,b_swing)
         I_stance_spd = lambda phi : I(phi, a_stance,b_stance)
         I_stance_frc = lambda phi : I(phi, a_stance,b_stance)
+        C_frc = lambda phi : c_swing_frc * I_swing_frc(phi) + c_stance_frc * I_stance_frc(phi) + c_stance_frc * I_stance_frc(phi)
 
-        C_frc = lambda phi : c_swing_frc * I_swing_frc(phi) + c_stance_frc * I_stance_frc(phi) 
         C_spd = lambda phi :  c_swing_spd * I_swing_spd(phi) + c_stance_spd * I_stance_spd(phi)
         
+        R_cmd = -1.0*q_vx-1.0*q_vy-1.0*q_orientation
 
-        R_cmd = - 1.0*q_vx - 1.0*q_vy - 1.0 * q_vz - 1.0*q_orientation
         R_smooth = -1.0*q_action_diff - 1.0* q_torque - 1.0*q_pelvis_acc
+
+
         R_biped = 0
         R_biped += C_frc(self.phi+THETA_LEFT) * q_left_frc
         R_biped += C_frc(self.phi+THETA_RIGHT) * q_right_frc
         R_biped += C_spd(self.phi+THETA_LEFT) * q_left_spd
         R_biped += C_spd(self.phi+THETA_RIGHT) * q_right_spd
 
-
-
         reward = 1.5  + 0.5 * R_biped  +  0.375* R_cmd +  0.125* R_smooth
+        #store all used values with their names in a dictionary
+        self.rewards = {
+            'R_biped': R_biped,
+            'R_cmd': R_cmd,
+            'R_smooth': R_smooth,
+            'q_vx': q_vx,
+            'q_vy': q_vy,
+            'q_orientation': q_orientation,
+            'q_action_diff': q_action_diff,
+            'q_torque': q_torque,
+            'q_pelvis_acc': q_pelvis_acc,
+            'q_left_frc': q_left_frc,
+            'q_right_frc': q_right_frc,
+            'q_left_spd': q_left_spd,
+            'q_right_spd': q_right_spd,
+            'reward': reward,
+            'contact_force_left_foot': np.linalg.norm(contact_force_left_foot)**2/4000
+        }
         return reward
     
-    #step in time
+
     def step(self, action):
         #clip the action to the ranges in action_space
         action = np.clip(action, self.action_space.low, self.action_space.high)
         
         self.do_simulation(action, self.frame_skip)
+
 
         observation = self._get_obs()
         
@@ -287,11 +339,11 @@ class CassieEnv(MujocoEnv):
         self.phi+= 1.0/STEPS_IN_CYCLE
         self.phi = self.phi % 1 
 
+        if self.render_mode == "human":
+            self.render()
         self.previous_action = action 
-
         return observation, reward, terminated, False, {}
 
-    #resets the simulation
     def reset_model(self):
 
         m.mj_inverse(self.model, self.data)
@@ -307,27 +359,20 @@ class CassieEnv(MujocoEnv):
 
         observation = self._get_obs()
         return observation
-
-
 import os
 log_dir = "/home/ajvendetta/ray_results"
 sim_dir = "./sim/"
-checkpoint_path = None
 #load the trainer from the latest checkpoint if exists 
 #get the full directory of latest modified directory in the log_dir 
 if(os.path.exists(log_dir)):
     latest_log_directory = max([d for d in os.listdir(log_dir) if d.startswith("PPO_")], default=0)
     print(latest_log_directory)
-    #check that the folder is not empty
-    if(latest_log_directory == 0):
-        print("No checkpoints found")
-    else:     
-        #get the latest directory in the latest log directory
-        latest_directory = max([d.split("_")[-1] for d in os.listdir(os.path.join(log_dir, latest_log_directory)) if d.startswith("checkpoint")], default=0)
-        #load the trainer from the latest checkpoint
-        checkpoint_path = os.path.join(log_dir, latest_log_directory, "checkpoint_{}/".format(latest_directory, latest_directory))
-        print(checkpoint_path)
 
+    #get the latest directory in the latest log directory
+    latest_directory = max([d.split("_")[-1] for d in os.listdir(os.path.join(log_dir, latest_log_directory)) if d.startswith("checkpoint")], default=0)
+    #load the trainer from the latest checkpoint
+    checkpoint_path = os.path.join(log_dir, latest_log_directory, "checkpoint_{}/".format(latest_directory, latest_directory))
+    print(checkpoint_path)
 #register the environment in rllib 
 
 #import the necessary libraries to initialize ray and register_env
@@ -337,157 +382,116 @@ from ray.tune.registry import register_env
 
 #initialize ray and choose the log directory
 
+import ray
 
-
-#initialize ray and register the environment
 ray.init(ignore_reinit_error=True)
+
 register_env("cassie-v0", lambda config: CassieEnv(config))
-from ray.rllib.algorithms.ppo.ppo_torch_policy import PPOTorchPolicy
-
-
-
-#initialize previous_action to torch zeros of size 10 
-previous_actions = torch.zeros(10)
-# <class 'ray.rllib.policy.tf_policy_template.MyTFPolicy'>
-from ray.rllib.models.torch.torch_action_dist import TorchDistributionWrapper
-class CAPSTorchPolicy(PPOTorchPolicy):
-
-
-    def __init__(self, observation_space, action_space, config):
-        super().__init__(observation_space, action_space, config)
-        self.previous_actions = torch.zeros(action_space.shape[0])
-        self.lambda_t = config.get("lambda_t", 0.1)
-        self.lambda_s = config.get("lambda_s", 0.1)
-        self.sigma = config.get("sigma", 0.1)
-    def loss(
-        self,
-        model: ModelV2,
-        dist_class: Type[TorchDistributionWrapper],
-        train_batch: SampleBatch,
-    ) -> Union[TensorType, List[TensorType]]:
-        # get the loss from the parent class
-        loss = super().loss(model, dist_class, train_batch)
-        # get the observations
-        obs = train_batch["obs"]
-        # get the actions
-        actions = train_batch["actions"]
-        # get the advantages
-        advantages = train_batch["advantages"]
-        # get the value targets
-        value_targets = train_batch["value_targets"]
-        # get the logits and the state of the model
-        logits, _ = model({"obs": obs})
-        # sample around the observations using a gaussian of reasonable std and get the log probability of the actions
-        dist = torch.distributions.Normal(obs, self.sigma)
-        # get the log probability of the actions
-        around_obs = dist.sample()
-        logits_around, _ = model({"obs": around_obs})
-        # get the loss of the state around the observations
-        L_S = torch.mean(torch.sum((logits - logits_around) ** 2, dim=1))
-        # get the loss of the actions around the observations
-        L_T = torch.mean(torch.sum((self.previous_actions - actions) ** 2, dim=1))
-        # add the loss of the state around the observations to the loss
-        loss = loss + self.lambda_s * L_S
-        # add the loss of the actions around the observations to the loss
-        loss = loss + self.lambda_t * L_T
-        # set the previous actions to the current actions
-        self.previous_actions = actions
-        return loss
-
-
-
-from ray.rllib.policy.tf_policy_template import build_tf_policy
-class PPOCAPSTrainer(PPOTrainer):
-    def __init__(self, config=None, env=None):
-        super().__init__(config=config, env=env)
-
-    def get_policy_class(self, registry):
-        return CAPSTorchPolicy
-
-    def _init_optimizers(self):
-        opt_type = self.config["optimizer"]["type"]
-        if opt_type == "Adam":
-            return torch.optim.Adam(self.model.parameters(), lr=self.config["optimizer"]["lr"], eps=self.config["optimizer"]["epsilon"])
-        else:
-            return super()._init_optimizers()
 
 config = {
     "framework": "torch",
-    "log_level": "WARN",
+    "log_level" : "WARN",
     "num_gpus": 1,
     "num_cpus": 20,
-    "num_workers": 30,
+    "num_workers": 5,
     "num_envs_per_worker": 1,
     "rollout_fragment_length": 300,
     "train_batch_size": 50000,
     "sgd_minibatch_size": 9000,
-    "num_sgd_iter": 5,
+    "num_sgd_iter": 10,
+    "lr": 0.0003,
     "optimizer": {
         "type": "Adam",
         "lr": 3e-4,
         "epsilon": 1e-5
     },
     "model": {
+        "conv_filters": None,
+        "fcnet_activation": "relu",
+        "fcnet_hiddens": [256, 256],
+        "use_lstm": False,
         "vf_share_layers": False,
-        "free_log_std": True,
-        "fcnet_activation": "swish",
-        "fcnet_hiddens": [256, 256,128,64],
+        "free_log_std": True
+
     },
     "entropy_coeff": 0.01,
     "gamma": 0.99,
     "lambda": 0.95,
     "kl_coeff": 0.5,
     "clip_param": 0.2,
+    "vf_clip_param": 10.0,
+    "grad_clip": 0.5,
+    "kl_target": 0.01,
     "batch_mode": "truncate_episodes",
     "observation_filter": "NoFilter",
     "reuse_actors": True,
-    "disable_env_checking": True,
-    "num_gpus_per_worker": 1.0/30,
-    "num_cpus_per_worker": 20.0/30,
-    # Evaluation parameters
-    "evaluation_interval": 10,
-    "evaluation_num_episodes": 10,
+    "disable_env_checking" : True,
+    "num_gpus_per_worker": 0.1,
+    "num_cpus_per_worker": 1,
     "evaluation_config": {
-        "env": "cassie-v0",
-        "seed": 1234,
+        "explore": True,
+        "evaluation_interval": 10,
+        "evaluation_num_episodes": 20
 
     }
-
 }
+from ray.rllib.agents.ppo import PPOTrainer
+import tensorflow as tf
 
-if(checkpoint_path is not None and latest_directory!=0):
-    #load the a temporary trainer from the checkpoint
-    temp = PPOCAPSTrainer(config, "cassie-v0")
-    temp.restore(checkpoint_path)
+import tensorboard
+
+import torch
+torch.cuda.empty_cache()
+
+trainer = PPOTrainer(config=config, env="cassie-v0")
+#load the trainer from the latest checkpoint if exists
+
+from ray.rllib.agents.ppo import PPOTrainer
+from ray.rllib.models import ModelCatalog
+
+# create the trainer and load the latest checkpoint if it exists
+trainer = PPOTrainer(config=config, env="cassie-v0")
+checkpoint_path = trainer.restore()
+
+# get the policy and its config
+policy = trainer.get_policy()
+policy_config = policy.config.copy()
+
+# get the missing arguments for get_model_v2 method
+action_space = policy_config["action_space"]
+num_outputs = policy_config["model"]["fcnet_hiddens"][-1]
+model_config = policy_config["model"]
+#set the num gpus and cpus to 0 in the policy config
+policy_config["num_gpus"] = 0
 
 
-    # Get policy weights
-    policy_weights = temp.get_policy().get_weights()
+# reload the model from the checkpoint
+ModelCatalog.get_model_v2(
+    policy.model,
+    action_space=action_space,
+    num_outputs=num_outputs,
+    model_config=model_config
+).restore(checkpoint_path)
 
-    # Destroy temp
-    temp.stop()
-else: 
-    temp = None
-trainer = PPOCAPSTrainer(config=config, env="cassie-v0")
-#only use the temporary if they have the same policy architecture
-if(checkpoint_path is not None and temp is not None and temp.get_policy().get_weights().keys() == trainer.get_policy().get_weights().keys() and latest_directory!=0) :
-    # Set the policy weights to the second trainer
-    trainer.get_policy().set_weights(policy_weights)
+# create a new policy with the reloaded model
+new_policy = policy.copy()
+new_policy.set_model(policy.model)
 
-# Define video codec and framerate
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-fps = 30
+# set the new policy in the trainer
+trainer.set_policy(new_policy)
+
+
+import cv2
+import os
 
 # Training loop
 
 max_test_i = 0
-checkpoint_frequency = 5
-simulation_frequency = 10
+checkpoint_frequency = 10
+simulation_frequency = 20
 env = CassieEnv({})
 env.render_mode = "rgb_array"
 
-if(not os.path.exists(sim_dir)):
-    os.makedirs(sim_dir)
 
 # Find the latest directory named test_i in the sim directory
 latest_directory = max([int(d.split("_")[-1]) for d in os.listdir(sim_dir) if d.startswith("test_")], default=0)
@@ -500,6 +504,8 @@ os.makedirs(test_dir, exist_ok=True)
 # Define video codec and framerate
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 fps = 30
+
+
 
 # Set initial iteration count
 i = trainer.iteration if hasattr(trainer, "iteration") else 0
@@ -518,9 +524,6 @@ while True:
 
         # Run a test every 20 epochs
         if i % simulation_frequency == 0:
-            
-            #make a steps counter
-            steps = 0
 
             # Run test
             video_path = os.path.join(test_dir, "sim_{}.mp4".format(i))
@@ -531,9 +534,6 @@ while True:
             frames = []
 
             while not done:
-
-                # Increment steps
-                steps += 1
                 action = trainer.compute_single_action(obs)
                 obs, _, done, _, _ = env.step(action)
                 frame = env.render()
@@ -545,6 +545,6 @@ while True:
             for frame in frames:
                 video_writer.write(frame)
             video_writer.release()
-            print("Test saved at", video_path)
+
             # Increment test index
             max_test_i += 1

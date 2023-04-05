@@ -33,32 +33,13 @@ def randomize_model():
         'pelvis_com_y': [-.7, .7],
         'pelvis_com_z': [-.1, .4],
     }
-    #iterate over the worldbody tag
-    for body in root.iter('worldbody'):
-        #iterate over the joint tags
-        for joint in body.iter('joint'):
-            #print the joint info 
     
-            if(joint.get('damping') != None):
+    #sample from ranges and return a dicitonary of the values
+    randomized_conf = {}
+    for key in ranges.keys():
+        randomized_conf[key] = np.random.uniform(ranges[key][0], ranges[key][1])
 
-    
-                joint.set('damping', str(float(joint.get('damping')) * np.random.uniform(ranges['joint_damping'][0], ranges['joint_damping'][1])))
-
-        #randomize the pelvis com
-        for bodypart in body.iter('body'):
-
-            if bodypart.get('name') == 'cassie-pelvis':
-                #convert string list to floats 
-                string_list = []
-
-                pelvis_pos = bodypart.get('pos').split(' ')
-
-                bodypart.set('pos', str(np.random.uniform(ranges['pelvis_com_x'][0], ranges['pelvis_com_x'][1])) + ' ' + str(float(pelvis_pos[1]) + np.random.uniform(ranges['pelvis_com_y'][0], ranges['pelvis_com_y'][1])) + ' ' + str(float(pelvis_pos[2]) + np.random.uniform(ranges['pelvis_com_z'][0], ranges['pelvis_com_z'][1])))
-
-    #save the new xml file
-    tree.write('cassie_randomized.xml')
-    # save also to  .pyenv/versions/3.8.16/envs/sandbox/lib/python3.8/site-packages/gymnasium/envs/mujoco/assets/cassie_randomized.xml
-    tree.write('/home/alhussein.jamil/.pyenv/versions/3.8.16/envs/sandbox/lib/python3.8/site-packages/gymnasium/envs/mujoco/assets/cassie_randomized.xml')
+    return(randomized_conf)
 
 
 
@@ -123,7 +104,7 @@ class CassieEnv(MujocoEnv):
 
     def __init__(self,config,  **kwargs):
         utils.EzPickle.__init__(self, config, **kwargs)
-        randomize_model()
+
         self._forward_reward_weight = config.get("forward_reward_weight", 1.25)
         self._ctrl_cost_weight = config.get("ctrl_cost_weight", 0.1)
         self._healthy_reward = config.get("healthy_reward", 5.0)
@@ -152,7 +133,10 @@ class CassieEnv(MujocoEnv):
         self.steps =0
         self.previous_action = np.zeros (10)
         observation_space = Box(low=-np.inf, high=np.inf, shape=(31,), dtype=np.float64)
-        MujocoEnv.__init__(self, config.get("model_path","cassie_randomized.xml") ,20,render_mode=config.get("render_mode",None),default_camera_config=DEFAULT_CAMERA_CONFIG, observation_space=observation_space,  **kwargs)
+        MujocoEnv.__init__(self, config.get("model_path","cassie.xml") ,20,render_mode=config.get("render_mode",None),default_camera_config=DEFAULT_CAMERA_CONFIG, observation_space=observation_space,  **kwargs)
+
+
+
         #set the camera settings to match the DEFAULT_CAMERA_CONFIG we defined above
 
 
@@ -309,7 +293,6 @@ class CassieEnv(MujocoEnv):
 
     #resets the simulation
     def reset_model(self):
-
         m.mj_inverse(self.model, self.data)
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale
