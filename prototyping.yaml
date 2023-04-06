@@ -1,0 +1,35 @@
+framework: torch
+log_level: WARN
+num_gpus: 0
+num_cpus: 8
+num_workers: 8
+num_envs_per_worker: 1
+rollout_fragment_length: 200
+train_batch_size: 10000
+sgd_minibatch_size: 2000
+observation_space: null
+num_sgd_iter: 5
+optimizer:
+  type: Adam
+  lr: 0.0003
+  epsilon: 1e-05
+model:
+  conv_filters: null
+  fcnet_activation: swish
+  fcnet_hiddens: [64, 64]
+  vf_share_layers: false
+  free_log_std: true
+entropy_coeff: 0.01
+gamma: 0.99
+lambda: 0.95
+kl_coeff: 0.5
+clip_param: 0.2
+batch_mode: complete_episodes
+reuse_actors: true
+num_cpus_per_worker: 1
+disable_env_checking: true
+evaluation_interval: 2
+evaluation_num_episodes: 10
+evaluation_config:
+  env: cassie-v0
+  seed: 1234
