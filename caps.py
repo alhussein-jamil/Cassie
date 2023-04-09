@@ -5,14 +5,14 @@ from ray.rllib.algorithms.ppo.ppo_torch_policy import PPOTorchPolicy
 
 import ray
 
-
+from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.policy.sample_batch import SampleBatch
 
 
 from ray.rllib.utils.typing import TensorType
 
-
+import constants as c
 
 import scipy.stats as stats
 from ray.rllib.models.torch.torch_action_dist import TorchDistributionWrapper
@@ -28,10 +28,7 @@ class CAPSTorchPolicy(PPOTorchPolicy):
 
     def __init__(self, observation_space, action_space, config):
         super().__init__(observation_space, action_space, config)
-        self.previous_actions = torch.zeros(action_space.shape[0])
-        self.lambda_t = config.get("lambda_t", 0.1)
-        self.lambda_s = config.get("lambda_s", 0.1)
-        self.sigma = config.get("sigma", 0.1)
+        
     def loss(
     self,
     model: ModelV2,
@@ -47,8 +44,6 @@ class CAPSTorchPolicy(PPOTorchPolicy):
         # get the logits and the state of the model
         logits, _ = model({"obs": obs})
         
-        # calculate the mean of L_T and L_S over the training batch
-        L_S = 0
 
 
         #get a bunch of normal distribution around 
@@ -59,41 +54,21 @@ class CAPSTorchPolicy(PPOTorchPolicy):
         logits_around, _ = model({"obs": around_obs})
 
 
-
-        L_S = 0
-        L_T = 0
-
-        for i in range (len(train_batch["actions"])):
-
-
-            # get the loss of the state around the observations
-            L_S += torch.mean(abs(logits[i]-logits_around[i]))
-
-            # get the loss of the actions around the observations
-            if(i>0):
-                L_T +=  f.action_dist(actions[i],actions[i-1])
-            
-        L_S = L_S / len(train_batch["actions"])
-        L_T = L_T / len(train_batch["actions"])
-        
+        L_S = torch.mean(torch.mean(torch.abs(logits-logits_around),axis=1))
+        L_T = torch.mean(f.action_dist(actions[1:,:],actions[:-1,:]))
+        loss = loss.to(c.device)
         # add the loss of the state around the observations to the loss
-        loss += CAPSTorchPolicy.lambda_s * L_S
-        loss += CAPSTorchPolicy.lambda_t * L_T
-
+        loss += CAPSTorchPolicy.lambda_s * L_S.to(c.device)
+        loss += CAPSTorchPolicy.lambda_t * L_T.to(c.device)
         return loss
 
 
-class PPOCAPSTrainer(PPOTrainer):
+class PPOCAPSTrainer(PPOTrainer,Algorithm):
     def __init__(self, config=None, env=None):
-        super().__init__(config=config, env=env)
+        PPOTrainer.__init__(self,config=config, env=env)
+        Algorithm.__init__(self,config=config, env=env)
 
     def get_default_policy_class(self, registry):
 
         return CAPSTorchPolicy
 
-    def _init_optimizers(self):
-        opt_type = self.config["optimizer"]["type"]
-        if opt_type == "Adam":
-            return torch.optim.Adam(self.model.parameters(), lr=self.config["optimizer"]["lr"], eps=self.config["optimizer"]["epsilon"])
-        else:
-            return super()._init_optimizers()

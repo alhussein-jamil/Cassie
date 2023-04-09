@@ -64,3 +64,15 @@ sensor_ranges = {
     'pelvis-angular-velocity': (-34.9, 34.9),
     'pelvis-orientation':(0,1)
 }
+
+#transform the actuator_ranges to a 2d tensor
+import torch 
+act_ranges = torch.tensor(list(actuator_ranges.values()))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+act_ranges = act_ranges.to(device)
+
+
+pos_index = np.array([1,2,3,4,5,6,7,8,9,14,15,16,20,21,22,23,28,29,30,34])
+
+
+vel_index = np.array([0,1,2,3,4,5,6,7,8,12,13,14,18,19,20,21,25,26,27,31])

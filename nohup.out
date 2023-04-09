@@ -1,0 +1,77 @@
+INFO:root:Resuming from previous run
+INFO:root:Log directory: /home/ajvendetta/ray_results
+INFO:root:True
+Traceback (most recent call last):
+  File "run.py", line 61, in <module>
+    loader = Loader(logdir = log_dir, simdir = sim_dir)
+  File "/home/ajvendetta/Downloads/Cassie-main/loader.py", line 16, in __init__
+    shutil.copytree("cassie-mujoco-sim-master/" + directory, mujoco_assets_path + directory, dirs_exist_ok=True)
+  File "/home/ajvendetta/.pyenv/versions/3.8.16/lib/python3.8/shutil.py", line 555, in copytree
+    with os.scandir(src) as itr:
+NotADirectoryError: [Errno 20] Not a directory: 'cassie-mujoco-sim-master/Makefile'
+INFO:root:Resuming from previous run
+INFO:root:Log directory: /home/ajvendetta/ray_results
+INFO:root:True
+Traceback (most recent call last):
+  File "run.py", line 61, in <module>
+    loader = Loader(logdir = log_dir, simdir = sim_dir)
+  File "/home/ajvendetta/Downloads/Cassie-main/loader.py", line 16, in __init__
+    shutil.copytree("cassie-mujoco-sim-master/model" + directory, mujoco_assets_path + directory, dirs_exist_ok=True)
+  File "/home/ajvendetta/.pyenv/versions/3.8.16/lib/python3.8/shutil.py", line 555, in copytree
+    with os.scandir(src) as itr:
+FileNotFoundError: [Errno 2] No such file or directory: 'cassie-mujoco-sim-master/modelcassiepole_x.xml'
+INFO:root:Resuming from previous run
+INFO:root:Log directory: /home/ajvendetta/ray_results
+INFO:root:True
+Traceback (most recent call last):
+  File "run.py", line 61, in <module>
+    loader = Loader(logdir = log_dir, simdir = sim_dir)
+  File "/home/ajvendetta/Downloads/Cassie-main/loader.py", line 16, in __init__
+    shutil.copytree("cassie-mujoco-sim-master/model/" + directory, mujoco_assets_path + directory, dirs_exist_ok=True)
+  File "/home/ajvendetta/.pyenv/versions/3.8.16/lib/python3.8/shutil.py", line 555, in copytree
+    with os.scandir(src) as itr:
+NotADirectoryError: [Errno 20] Not a directory: 'cassie-mujoco-sim-master/model/cassiepole_x.xml'
+INFO:root:Resuming from previous run
+INFO:root:Log directory: /home/ajvendetta/ray_results
+INFO:root:True
+INFO:root:Running with CAPS regularization
+INFO:root:Log directory exists with path /home/ajvendetta/ray_results
+INFO:root:Found log directory with path /home/ajvendetta/ray_results/PPOCAPSTrainer_cassie-v0_2023-04-08_00-39-47h1rejfc1 and latest log directory is (if 0 means no logs)PPOCAPSTrainer_cassie-v0_2023-04-08_00-39-47h1rejfc1
+INFO:root:Found checkpoint in the log directory with path /home/ajvendetta/ray_results/PPOCAPSTrainer_cassie-v0_2023-04-08_00-39-47h1rejfc1/checkpoint_000505/
+INFO:root:creating dummy trainer
+2023-04-08 12:35:41,488	WARNING algorithm_config.py:596 -- Cannot create PPOConfig from given `config_dict`! Property opt_type not supported.
+2023-04-08 12:35:41,488	WARNING deprecation.py:50 -- DeprecationWarning: `AlgorithmConfig.evaluation(evaluation_num_episodes=..)` has been deprecated. Use `AlgorithmConfig.evaluation(evaluation_duration=.., evaluation_duration_unit='episodes')` instead. This will raise an error in the future!
+2023-04-08 12:35:41,488	WARNING deprecation.py:50 -- DeprecationWarning: `algo = Algorithm(env='cassie-v0', ...)` has been deprecated. Use `algo = AlgorithmConfig().environment('cassie-v0').build()` instead. This will raise an error in the future!
+2023-04-08 12:35:41,505	INFO algorithm.py:506 -- Current log_level is WARN. For more information, set 'log_level': 'INFO' / 'DEBUG' or use the -v and -vv flags.
+2023-04-08 12:35:43,275	INFO worker.py:1553 -- Started a local Ray instance.
+2023-04-08 12:36:16,648	INFO trainable.py:172 -- Trainable.setup took 35.143 seconds. If your trainable is slow to initialize, consider setting reuse_actors=True to reduce actor creation overheads.
+2023-04-08 12:36:16,657	WARNING util.py:67 -- Install gputil for GPU system monitoring.
+2023-04-08 12:36:16,663	WARNING deprecation.py:50 -- DeprecationWarning: `AlgorithmConfig.evaluation(evaluation_num_episodes=..)` has been deprecated. Use `AlgorithmConfig.evaluation(evaluation_duration=.., evaluation_duration_unit='episodes')` instead. This will raise an error in the future!
+2023-04-08 12:36:16,664	WARNING deprecation.py:50 -- DeprecationWarning: `algo = Algorithm(env='cassie-v0', ...)` has been deprecated. Use `algo = AlgorithmConfig().environment('cassie-v0').build()` instead. This will raise an error in the future!
+[2m[33m(raylet)[0m [2023-04-08 12:36:43,243 E 1857911 1857911] (raylet) node_manager.cc:3040: 48 Workers (tasks / actors) killed due to memory pressure (OOM), 0 Workers crashed due to other reasons at node (ID: e9937516e7bf8651b71ca258f63bad82a1e783fba82c36f84a1a33aa, IP: 129.104.243.51) over the last time period. To see more information about the Workers killed on this node, use `ray logs raylet.out -ip 129.104.243.51`
+[2m[33m(raylet)[0m 
+[2m[33m(raylet)[0m Refer to the documentation on how to address the out of memory issue: https://docs.ray.io/en/latest/ray-core/scheduling/ray-oom-prevention.html. Consider provisioning more memory on this node or reducing task parallelism by requesting more CPUs per task. To adjust the kill threshold, set the environment variable `RAY_memory_usage_threshold` when starting Ray. To disable worker killing, set the environment variable `RAY_memory_monitor_refresh_ms` to zero.
+2023-04-08 12:36:55,037	INFO trainable.py:172 -- Trainable.setup took 38.358 seconds. If your trainable is slow to initialize, consider setting reuse_actors=True to reduce actor creation overheads.
+2023-04-08 12:36:55,049	WARNING util.py:67 -- Install gputil for GPU system monitoring.
+2023-04-08 12:36:55,514	INFO trainable.py:791 -- Restored on 129.104.243.51 from checkpoint: /home/ajvendetta/ray_results/PPOCAPSTrainer_cassie-v0_2023-04-08_00-39-47h1rejfc1/checkpoint_000505
+2023-04-08 12:36:55,514	INFO trainable.py:800 -- Current state after restoring: {'_iteration': 505, '_timesteps_total': None, '_time_total': 37658.22763848305, '_episodes_total': 280895}
+INFO:root:Weights loaded from checkpoint successfully
+2023-04-08 12:36:55,763	WARNING deprecation.py:50 -- DeprecationWarning: `AlgorithmConfig.evaluation(evaluation_num_episodes=..)` has been deprecated. Use `AlgorithmConfig.evaluation(evaluation_duration=.., evaluation_duration_unit='episodes')` instead. This will raise an error in the future!
+2023-04-08 12:36:55,764	WARNING deprecation.py:50 -- DeprecationWarning: `algo = Algorithm(env='cassie-v0', ...)` has been deprecated. Use `algo = AlgorithmConfig().environment('cassie-v0').build()` instead. This will raise an error in the future!
+2023-04-08 12:37:36,327	INFO trainable.py:172 -- Trainable.setup took 40.529 seconds. If your trainable is slow to initialize, consider setting reuse_actors=True to reduce actor creation overheads.
+2023-04-08 12:37:36,340	WARNING util.py:67 -- Install gputil for GPU system monitoring.
+2023-04-08 12:37:36,346	WARNING deprecation.py:50 -- DeprecationWarning: `AlgorithmConfig.evaluation(evaluation_num_episodes=..)` has been deprecated. Use `AlgorithmConfig.evaluation(evaluation_duration=.., evaluation_duration_unit='episodes')` instead. This will raise an error in the future!
+2023-04-08 12:37:36,347	WARNING deprecation.py:50 -- DeprecationWarning: `algo = Algorithm(env='cassie-v0', ...)` has been deprecated. Use `algo = AlgorithmConfig().environment('cassie-v0').build()` instead. This will raise an error in the future!
+[2m[33m(raylet)[0m [2023-04-08 12:37:43,244 E 1857911 1857911] (raylet) node_manager.cc:3040: 21 Workers (tasks / actors) killed due to memory pressure (OOM), 0 Workers crashed due to other reasons at node (ID: e9937516e7bf8651b71ca258f63bad82a1e783fba82c36f84a1a33aa, IP: 129.104.243.51) over the last time period. To see more information about the Workers killed on this node, use `ray logs raylet.out -ip 129.104.243.51`
+[2m[33m(raylet)[0m 
+[2m[33m(raylet)[0m Refer to the documentation on how to address the out of memory issue: https://docs.ray.io/en/latest/ray-core/scheduling/ray-oom-prevention.html. Consider provisioning more memory on this node or reducing task parallelism by requesting more CPUs per task. To adjust the kill threshold, set the environment variable `RAY_memory_usage_threshold` when starting Ray. To disable worker killing, set the environment variable `RAY_memory_monitor_refresh_ms` to zero.
+2023-04-08 12:38:28,416	INFO trainable.py:172 -- Trainable.setup took 52.044 seconds. If your trainable is slow to initialize, consider setting reuse_actors=True to reduce actor creation overheads.
+2023-04-08 12:38:28,428	WARNING util.py:67 -- Install gputil for GPU system monitoring.
+[2m[33m(raylet)[0m [2023-04-08 12:38:43,247 E 1857911 1857911] (raylet) node_manager.cc:3040: 44 Workers (tasks / actors) killed due to memory pressure (OOM), 0 Workers crashed due to other reasons at node (ID: e9937516e7bf8651b71ca258f63bad82a1e783fba82c36f84a1a33aa, IP: 129.104.243.51) over the last time period. To see more information about the Workers killed on this node, use `ray logs raylet.out -ip 129.104.243.51`
+[2m[33m(raylet)[0m 
+[2m[33m(raylet)[0m Refer to the documentation on how to address the out of memory issue: https://docs.ray.io/en/latest/ray-core/scheduling/ray-oom-prevention.html. Consider provisioning more memory on this node or reducing task parallelism by requesting more CPUs per task. To adjust the kill threshold, set the environment variable `RAY_memory_usage_threshold` when starting Ray. To disable worker killing, set the environment variable `RAY_memory_monitor_refresh_ms` to zero.
+[2m[33m(raylet)[0m [2023-04-08 12:40:43,250 E 1857911 1857911] (raylet) node_manager.cc:3040: 1 Workers (tasks / actors) killed due to memory pressure (OOM), 0 Workers crashed due to other reasons at node (ID: e9937516e7bf8651b71ca258f63bad82a1e783fba82c36f84a1a33aa, IP: 129.104.243.51) over the last time period. To see more information about the Workers killed on this node, use `ray logs raylet.out -ip 129.104.243.51`
+[2m[33m(raylet)[0m 
+[2m[33m(raylet)[0m Refer to the documentation on how to address the out of memory issue: https://docs.ray.io/en/latest/ray-core/scheduling/ray-oom-prevention.html. Consider provisioning more memory on this node or reducing task parallelism by requesting more CPUs per task. To adjust the kill threshold, set the environment variable `RAY_memory_usage_threshold` when starting Ray. To disable worker killing, set the environment variable `RAY_memory_monitor_refresh_ms` to zero.
+2023-04-08 12:40:48,212	ERROR actor_manager.py:496 -- Ray error, taking actor 5 out of service. The actor died unexpectedly before finishing this task.
+[2023-04-08 12:53:25,391 E 1857572 1858071] gcs_rpc_client.h:533: Failed to connect to GCS within 60 seconds. GCS may have been killed. It's either GCS is terminated by `ray stop` or is killed unexpectedly. If it is killed unexpectedly, see the log file gcs_server.out. https://docs.ray.io/en/master/ray-observability/ray-logging.html#logging-directory-structure. The program will terminate.

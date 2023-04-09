@@ -7,9 +7,13 @@ from ray.tune.registry import register_env
 import argparse
 from caps import *
 import logging as log 
+import shutil
+from ray.rllib.algorithms.registry import POLICIES
+
 log.basicConfig(level=log.DEBUG)
 
 if __name__ == "__main__":
+
     #To call the function I wan to use the following command: python run.py -clean --simdir="" --logdir=""
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-cleanrun", action="store_true", help="Runs without loading the previous simulation")
@@ -46,12 +50,12 @@ if __name__ == "__main__":
     
     if(args.logdir is not None):
         log_dir = args.logdir
-        log.info("Log directory: {}".format(log_dir))
     else:
-        log_dir = "/home/alhussein.jamil/ray_results"
+        log_dir = "/home/ajvendetta/ray_results"
 
 
-
+    log.info("Log directory: {}".format(log_dir))
+    log.info(os.path.exists(log_dir))
     register_env("cassie-v0", lambda config: CassieEnv(config))
 
     loader = Loader(logdir = log_dir, simdir = sim_dir)
@@ -69,9 +73,6 @@ if __name__ == "__main__":
     else:
         log.info('Running with CAPS regularization')
         Trainer = PPOCAPSTrainer
-        from ray.rllib.algorithms.registry import POLICIES
-        # register the policy
-        POLICIES["CAPSTorchPolicy"] = CAPSTorchPolicy
 
     if(not clean_run):
         checkpoint_path = loader.find_checkpoint(Trainer.__name__)
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
     
     trainer = Trainer(config=config, env="cassie-v0")
-    
+    print(weights.keys() == trainer.get_policy().get_weights().keys())
     if(not clean_run and weights is not None):
         if(checkpoint_path is not None and weights.keys() == trainer.get_policy().get_weights().keys()) :
     

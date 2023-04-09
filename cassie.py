@@ -6,8 +6,10 @@ import numpy as np
 import gymnasium as gym 
 from gymnasium.spaces import Box
 import mujoco as m 
+import torch
 
- 
+
+
 class CassieEnv(MujocoEnv):
     metadata = {
         "render_modes": [
@@ -27,14 +29,23 @@ class CassieEnv(MujocoEnv):
         # create the action space using the actuator ranges
         low = [c.actuator_ranges[key][0] for key in c.actuator_ranges.keys()]
         high = [c.actuator_ranges[key][1] for key in c.actuator_ranges.keys()]
-        self.action_space = gym.spaces.Box(np.array(low), np.array(high), dtype=np.float32)
+        self.action_space = gym.spaces.Box(np.array(low), np.array(high))
         self._reset_noise_scale = config.get("reset_noise_scale", 1e-2)
         self.phi = 0
         self.steps =0
-        self.previous_action = np.zeros (10)
-        observation_space = Box(low=-np.inf, high=np.inf, shape=(25,), dtype=np.float64)
+        self.previous_action = torch.zeros(10)
+        low = [-3]*23
+        low.append(-1)
+        low.append(-1)
+        high = [3]*23
+        high.append(1)
+        high.append(1)
+        self.gamma = config.get("gamma",0.99)
+        self.gamma_modified = 1
+        self.rewards = {"R_biped":0,"R_cmd":0,"R_smooth":0}
+        self.observation_space = Box(low=np.array(low), high=np.array(high), shape=(25,))
 
-        MujocoEnv.__init__(self, config.get("model_path","cassie.xml"),20 ,render_mode=config.get("render_mode",None),default_camera_config=c.DEFAULT_CAMERA_CONFIG, observation_space=observation_space,  **kwargs)
+        MujocoEnv.__init__(self, config.get("model_path","cassie.xml"),20 ,render_mode=config.get("render_mode",None), observation_space=self.observation_space,  **kwargs)
         #set the camera settings to match the DEFAULT_CAMERA_CONFIG we defined above
 
 
@@ -106,11 +117,8 @@ class CassieEnv(MujocoEnv):
         qvel = self.data.qvel.flat.copy()
 
 
-        pos_index = np.array([1,2,3,4,5,6,7,8,9,14,15,16,20,21,22,23,28,29,30,34])
-        
 
-        vel_index = np.array([0,1,2,3,4,5,6,7,8,12,13,14,18,19,20,21,25,26,27,31])
-        return np.concatenate([qpos[pos_index], qvel[vel_index]])
+        return np.concatenate([qpos[c.pos_index], qvel[c.vel_index]])
     
     #computes the reward
     def compute_reward(self,action):
@@ -141,7 +149,7 @@ class CassieEnv(MujocoEnv):
         q_right_frc = 1.0 - np.exp(-c.OMEGA * np.linalg.norm(contact_force_right_foot)**2/c.q_frc_coef)
         q_left_spd = 1.0 - np.exp(-np.linalg.norm(qvel[12])**2)
         q_right_spd = 1.0 - np.exp(-np.linalg.norm(qvel[19])**2)
-        q_action_diff = 1 - np.exp(-f.action_dist(action,self.previous_action))
+        q_action_diff = 1 - np.exp(-float(f.action_dist(torch.tensor(action).reshape(1,-1),torch.tensor(self.previous_action).reshape(1,-1))))
         q_orientation = 1 -np.exp(-3*(1-((self.data.sensor('pelvis-orientation').data.T)@(c.FORWARD_QUARTERNIONS))**2))
         q_torque = 1 - np.exp(-0.05*np.linalg.norm(action))
         q_pelvis_acc = 1 - np.exp(-0.10*(np.linalg.norm(self.data.sensor('pelvis-angular-velocity').data) ))#+ np.linalg.norm(self.data.sensor('pelvis-linear-acceleration').data-self.model.opt.gravity.data)))
@@ -168,9 +176,13 @@ class CassieEnv(MujocoEnv):
 
 
 
-        reward = 2.5  + 0.5 * R_biped  +  0.375* R_cmd +  0.125* R_smooth
+        reward = 2  + 0.5 * R_biped  +  0.375* R_cmd +  0.125* R_smooth
         
         self.used_quantities = {"C_frc_left":C_frc(self.phi+c.THETA_LEFT),"C_frc_right":C_frc(self.phi+c.THETA_RIGHT),"C_spd_left":C_spd(self.phi+c.THETA_LEFT),"C_spd_right":C_spd(self.phi+c.THETA_RIGHT),'q_vx':q_vx,'q_vy':q_vy,'q_vz':q_vz,'q_left_frc':q_left_frc,'q_right_frc':q_right_frc,'q_left_spd':q_left_spd,'q_right_spd':q_right_spd,'q_action_diff':q_action_diff,'q_orientation':q_orientation,'q_torque':q_torque,'q_pelvis_acc':q_pelvis_acc,'R_cmd':R_cmd,'R_smooth':R_smooth,'R_biped':R_biped}
+
+        self.rewards['R_cmd']+=self.gamma_modified*R_cmd
+        self.rewards['R_smooth']+=self.gamma_modified*R_smooth
+        self.rewards['R_biped']+=self.gamma_modified*R_biped
 
         return reward
     
@@ -178,7 +190,7 @@ class CassieEnv(MujocoEnv):
     def step(self, action):
         #clip the action to the ranges in action_space
         action = np.clip(action, self.action_space.low, self.action_space.high)
-        
+
         self.do_simulation(action, self.frame_skip)
 
         observation = self._get_obs()
@@ -193,6 +205,7 @@ class CassieEnv(MujocoEnv):
 
         self.previous_action = action 
 
+        self.gamma_modified *= self.gamma
         return observation, reward, terminated, False, {}
 
     #resets the simulation
@@ -204,10 +217,13 @@ class CassieEnv(MujocoEnv):
         self.previous_action = np.zeros (10)
         self.phi = 0 
         self.steps = 0 
-        
+        self.rewards = {"R_biped":0,"R_cmd":0,"R_smooth":0}
+
+        self.gamma_modified = 1
         qpos = self.init_qpos + self.np_random.uniform(low=noise_low, high=noise_high, size=self.model.nq)
         qvel = self.init_qvel + self.np_random.uniform(low=noise_low, high=noise_high, size=self.model.nv)
         self.set_state(qpos, qvel)
 
         observation = self._get_obs()
         return observation
+    
