@@ -71,4 +71,16 @@ class PPOCAPSTrainer(PPOTrainer,Algorithm):
     def get_default_policy_class(self, registry):
 
         return CAPSTorchPolicy
+    
 
+from ray.rllib.algorithms.ppo import PPOConfig
+
+
+class PPOCAPSConfig(PPOConfig):
+    def __init__(self, algo_class=None):
+        super().__init__(self,algo_class)
+
+    def get_default_policy_class(self, registry):
+
+        return CAPSTorchPolicy
+    

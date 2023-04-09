@@ -25,7 +25,7 @@ class CassieEnv(MujocoEnv):
         utils.EzPickle.__init__(self, config, **kwargs)
         self._terminate_when_unhealthy = config.get("terminate_when_unhealthy", True)
         self._healthy_z_range = config.get("healthy_z_range", (0.35, 2.0))
-        
+ 
         # create the action space using the actuator ranges
         low = [c.actuator_ranges[key][0] for key in c.actuator_ranges.keys()]
         high = [c.actuator_ranges[key][1] for key in c.actuator_ranges.keys()]
@@ -45,7 +45,7 @@ class CassieEnv(MujocoEnv):
         self.rewards = {"R_biped":0,"R_cmd":0,"R_smooth":0}
         self.observation_space = Box(low=np.array(low), high=np.array(high), shape=(25,))
 
-        MujocoEnv.__init__(self, config.get("model_path","cassie.xml"),20 ,render_mode=config.get("render_mode",None), observation_space=self.observation_space,  **kwargs)
+        MujocoEnv.__init__(self, config.get("model_path","/home/ajvendetta/Downloads/Cassie-main/cassie-mujoco-sim-master/model/cassie.xml"),20 ,render_mode=config.get("render_mode",None), observation_space=self.observation_space,  **kwargs)
         #set the camera settings to match the DEFAULT_CAMERA_CONFIG we defined above
 
 
@@ -189,7 +189,7 @@ class CassieEnv(MujocoEnv):
     #step in time
     def step(self, action):
         #clip the action to the ranges in action_space
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        #action = np.clip(action, self.action_space.low, self.action_space.high)
 
         self.do_simulation(action, self.frame_skip)
 

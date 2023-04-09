@@ -7,7 +7,7 @@ training:
   # The default learning rate.
   lr: 0.001
   # Training batch size, if applicable.
-  train_batch_size: 50000
+  train_batch_size: 30000
 
   # Arguments passed into the policy model. See models/catalog.py for a full list of the available model options. 
   # TODO: Provide ModelConfig objects instead of dicts.
@@ -37,7 +37,7 @@ training:
   kl_coeff: 0.2
 
   # sgd_minibatch_size – Total SGD batch size across all devices for SGD. This defines the minibatch size within each epoch.
-  sgd_minibatch_size: 9000
+  sgd_minibatch_size: 5000
 
   # num_sgd_iter – Number of SGD iterations in each outer loop (i.e., number of epochs to execute per train batch).
   num_sgd_iter: 6
@@ -152,6 +152,11 @@ resources:
   # Note that not all algorithms can take advantage of GPUs.
   # Support for multi-GPU is currently only available for tf-[PPO/IMPALA/DQN/PG].
   # This can be fractional (e.g., 0.3 GPUs).
-  num_gpus: 0
+  num_gpus: 1
 
+  # Number of CPUs to allocate per worker.
+  num_cpus_per_worker: 1
+
+  # Number of GPUs to allocate per worker.
+  num_gpus_per_worker: 0.05
   

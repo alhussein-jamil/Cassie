@@ -9,7 +9,7 @@ class Loader():
     def __init__(self, logdir, simdir):
         self.logdir = logdir
         self.simdir = simdir
-        mujoco_assets_path = "/home/ajvendetta/.pyenv/versions/cassie/lib/python3.8/site-packages/gymnasium/envs/mujoco/assets/"
+        mujoco_assets_path = "/home/ajvendetta/miniconda3/envs/tf/lib/python3.8/site-packages/gymnasium/envs/mujoco/assets/"
         #copy all the contents as well as subdirectories of cassie-mujoco-sim-master to the above path and replace it if it already exists
         directories = os.listdir("cassie-mujoco-sim-master/model/")
         for directory in directories:
@@ -22,7 +22,7 @@ class Loader():
 
         #copy caps.py to ray/rllib/algorithms
         shutil.copy2("caps.py", "/home/ajvendetta/.pyenv/versions/cassie/lib/python3.8/site-packages/ray/rllib/algorithms/")
-
+        shutil.copy2("caps.py", "/home/ajvendetta/miniconda3/envs/tf/lib/python3.8/site-packages/ray/rllib/algorithms/")
         # register the policy
         POLICIES["CAPSTorchPolicy"] = "caps"
 
