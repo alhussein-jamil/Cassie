@@ -5,7 +5,7 @@ sensor_sizes = [1,1,1,1,1,1,1,1,3,3,3,4,1,1,1,1,1,1,1,1]
 #The constants are defined here
 THETA_LEFT = 0.5
 THETA_RIGHT = 0
-MAX_STEPS = 300 
+MAX_STEPS = 1000
 OMEGA = 100 
 STEPS_IN_CYCLE= 35 
 a_swing = 0 
@@ -69,6 +69,7 @@ sensor_ranges = {
 import torch 
 act_ranges = torch.tensor(list(actuator_ranges.values()))
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 act_ranges = act_ranges.to(device)
 
 

@@ -54,16 +54,16 @@ training:
   entropy_coeff: 0.01
 
   # entropy_coeff_schedule – Decay schedule for the entropy regularizer.
-  #entropy_coeff_schedule: null
+  entropy_coeff_schedule: null
 
   # clip_param – PPO clip parameter.
   clip_param: 0.2
 
   # vf_clip_param – Clip param for the value function. Note that this is sensitive to the scale of the rewards. If your expected V is large, increase this.
-  #vf_clip_param: null
+  vf_clip_param: 10
 
   # grad_clip – If specified, clip the global norm of gradients by this amount.
-  #grad_clip: null
+  grad_clip: 100
 
   # kl_target – Target value for KL divergence.
   kl_target: 0.01
@@ -75,7 +75,7 @@ training:
   # You can inspect the object store during your experiment via a call to ray memory on your headnode, and by using the ray dashboard. 
   # If you’re seeing that the object store is filling up, turn down the number of remote requests in flight, 
   # or enable compression in your experiment of timesteps.
-  #max_requests_in_flight_per_sampler_worker: null
+  max_requests_in_flight_per_sampler_worker: 0
 
   # Whether to enable the TrainerRunner and RLTrainer for training. 
   # This API uses ray.train to run the training loop which allows for a more flexible distributed training.
@@ -106,7 +106,7 @@ environment:
   # In order for this to work, your env will have to implement the render() method which either:
   # a) handles window generation and rendering itself (returning True)
   # b) returns a numpy uint8 image of shape [height x width x 3 (RGB)]
-  #render_env: null
+  render_env: null
 
   # Whether to clip rewards during Policy’s postprocessing. 
   # None (default): Clip for Atari only (r=sign(r)).
@@ -118,7 +118,7 @@ environment:
 
   # If True, RLlib will learn entirely inside a normalized action space (0.0 centered with small stddev; only affecting Box components).
   # We will unsquash actions (and clip, just in case) to the bounds of the env’s action space before sending actions back to the env.
-  normalize_actions: true
+  normalize_actions: false
 
   # If True, RLlib will clip actions according to the env’s bounds before sending them back to the env.
   # TODO: (sven) This option should be deprecated and always be False.
@@ -134,7 +134,7 @@ environment:
   # Whether to auto-wrap old gym environments (using the pre 0.24 gym APIs, e.g. reset() returning single obs and no info dict).
   # If True, RLlib will automatically wrap the given gym env class with the gym-provided compatibility wrapper (gym.wrappers.EnvCompatibility).
   # If False, RLlib will produce a descriptive error on which steps to perform to upgrade to gymnasium (or to switch this flag to True).
-  auto_wrap_old_gym_envs: null
+  auto_wrap_old_gym_envs: false
 
 
 
@@ -174,11 +174,11 @@ rollouts:
   # Number of rollout worker actors to create for parallel sampling.
   # Setting this to 0 will force rollouts to be done in the local worker (driver process
   # or the Algorithm’s actor when using Tune).
-  num_rollout_workers: 4
+  num_rollout_workers: 20
 
   # Number of environments to evaluate vector-wise per worker.
   # This enables model inference batching, which can improve performance for inference bottlenecked workloads.
-  num_envs_per_worker: 5
+  num_envs_per_worker: 1
 
   # The SampleCollector class to be used to collect and retrieve environment-, model-, and sampler data.
   # Override the SampleCollector base class to implement your own collection/buffering/retrieval logic.
@@ -250,7 +250,7 @@ rollouts:
   # Only useful if either ignore_worker_failures or recreate_failed_workers is True.
   # Note that for restart_failed_sub_environments and sub-environment failures, the worker itself is NOT affected and won’t throw any errors
   # as the flawed sub-environment is silently restarted under the hood.
-  num_consecutive_worker_failures_tolerance: null  
+  num_consecutive_worker_failures_tolerance: 5  
 
   # Whether to use “rllib” or “deepmind” preprocessors by default. Set to None for using no preprocessor.
   # In this case, the model will have to handle possibly complex observations from the environment.
@@ -300,21 +300,21 @@ evaluation:
   # The timeout (in seconds) for the ray.get call to the remote evaluation worker(s) sample() method.
   # After this time, the user will receive a warning and instructions on how to fix the issue.
   # This could be either to make sure the episode ends, increasing the timeout, or switching to evaluation_duration_unit=timesteps.
-  #evaluation_sample_timeout_s: null
+  evaluation_sample_timeout_s: null
 
   # Whether to run evaluation in parallel to a Algorithm.train() call using threading.
   # Default=False.
   # E.g. evaluation_interval=2 -> For every other training iteration, the Algorithm.train() and Algorithm.evaluate() calls run in parallel.
   # Note: This is experimental.
   # Possible pitfalls could be race conditions for weight synching at the beginning of the evaluation loop.
-  #evaluation_parallel_to_training: False
+  evaluation_parallel_to_training: False
 
   # Typical usage is to pass extra args to evaluation env creator and to disable exploration by computing deterministic actions.
   # IMPORTANT NOTE: Policy gradient algorithms are able to find the optimal policy, even if this is a stochastic one.
   # Setting "explore=False" here will result in the evaluation workers not using this optimal policy!
-  # evaluation_config:
-  #     explore: False
-  #     extra_args: {}
+  evaluation_config:
+    explore: False
+    extra_args: {}
       
   # Specify how to evaluate the current policy, along with any optional config parameters.
   # This only has an effect when reading offline experiences ("input" is not "sampler").
@@ -324,38 +324,38 @@ evaluation:
   # You can also add additional config arguments to be passed to the OffPolicyEstimator in the dict,
   # e.g. {"qreg_dr": {"type": DoublyRobust, "q_model_type": "qreg", "k": 5}}
   # off_policy_estimation_methods:
-  #     ope_method_name: null
-  #     type: null
-  #     extra_config: {}
+  #      ope_method_name: null
+  #      type: null
+  #      extra_config: {}
   
 
   # Whether to use SampleBatch.split_by_episode() to split the input batch to episodes before estimating the ope metrics.
   # In case of bandits you should make this False to see improvements in ope evaluation speed.
   # In case of bandits, it is ok to not split by episode, since each record is one timestep already.
   # The default is True.
-  #ope_split_batch_by_episode: null
+  ope_split_batch_by_episode: null
 
   # Number of parallel workers to use for evaluation.
   # Note that this is set to zero by default, which means evaluation will be run
   # in the algorithm process (only if evaluation_interval is not None).
   # If you increase this, it will increase the Ray resource usage of the algorithm
   # since evaluation workers are created separately from rollout workers (used to sample data for training).
-  #evaluation_num_workers: 10
+  #evaluation_num_workers: 0
 
   # Customize the evaluation method.
   # This must be a function of signature (algo: Algorithm, eval_workers: WorkerSet) -> metrics: dict.
   # See the Algorithm.evaluate() method to see the default implementation.
   # The Algorithm guarantees all eval workers have the latest policy state before this function is called.
-  # custom_evaluation_function: null
+  custom_evaluation_function: null
 
   # Make sure the latest available evaluation results are always attached to a step result dict.
   # This may be useful if Tune or some other meta controller needs access to evaluation metrics all the time.
-  # always_attach_evaluation_results: null
+  always_attach_evaluation_results: null
 
   # If True, use an AsyncRequestsManager for the evaluation workers and use this manager
   # to send sample() requests to the evaluation workers. This way, the Algorithm becomes
   # more robust against long running episodes and/or failing (and restarting) workers.
-  # enable_async_evaluation: null 
+  enable_async_evaluation: null 
 
 checkpointing: 
   # Whether to include (tf or torch) native model files in the individual Policy or Algorithm checkpoints.
@@ -371,24 +371,24 @@ checkpointing:
 debugging: 
 
   # Callable that creates a ray.tune.Logger object. If unspecified, a default logger is created.
-  #logger_creator: null
+  logger_creator: null
 
   # Define logger-specific configuration to be used inside Logger.
   # Default value None allows overwriting with nested dicts.
-  #logger_config: null
+  logger_config: null
 
   # Set the ray.rllib.* log level for the agent process and its workers.
   # Should be one of DEBUG, INFO, WARN, or ERROR.
   # The DEBUG level will also periodically print out summaries of relevant internal dataflow (this is also printed out once at startup at the INFO level).
   # When using the rllib train command, you can also use the -v and -vv flags as shorthand for INFO and DEBUG.
-  #log_level: null
+  log_level: null
 
   # Log system resource metrics to results.
   # This requires psutil to be installed for sys stats, and gputil for GPU metrics.
-  #log_sys_usage: false
+  log_sys_usage: false
 
   # Use fake (infinite speed) sampler. For testing only.
-  #fake_sampler: null
+  fake_sampler: null
 
   # This argument, in conjunction with worker_index, sets the random seed of each worker, so that identically configured trials will have identical results. This makes experiments reproducible.
   seed: 1234
@@ -411,7 +411,7 @@ resources:
   # Set to True for debugging (multi-)?GPU functionality on a CPU machine.
   # GPU towers will be simulated by graphs located on CPUs in this case.
   # Use num_gpus to test for different numbers of fake GPUs.
-  #_fake_gpus: null
+  _fake_gpus: null
 
   # Number of CPUs to allocate per worker.
   num_cpus_per_worker: 1
@@ -419,33 +419,33 @@ resources:
   # Number of GPUs to allocate per worker. This can be fractional.
   # This is usually needed only if your env itself requires a GPU (i.e., it is a GPU-intensive video game),
   # or model inference is unusually expensive.
-  #num_gpus_per_worker: 0.05
+  num_gpus_per_worker: 0.05
 
   # Number of workers used for training. A value of 0 means training will take place on a local worker on head node CPUs or 1 GPU
   # (determined by num_gpus_per_trainer_worker).
   # For multi-gpu training, set number of workers greater than 1 and set num_gpus_per_trainer_worker accordingly
   # (e.g. 4 GPUs total, and model needs 2 GPUs: num_trainer_workers = 2 and num_gpus_per_trainer_worker = 2)
-  #num_trainer_workers: null 
+  num_trainer_workers: 0 
 
   # Number of CPUs allocated per trainer worker.
   # Only necessary for custom processing pipeline inside each RLTrainer requiring multiple CPU cores.
   # Ignored if num_trainer_workers = 0.
-  #num_cpus_per_trainer_worker: null
+  num_cpus_per_trainer_worker: null
 
   # Number of GPUs allocated per worker.
   # If num_trainer_workers = 0, any value greater than 0 will run the training on a single GPU on the head node,
   # while a value of 0 will run the training on head node CPU cores.
-  #num_gpus_per_trainer_worker: null
+  num_gpus_per_trainer_worker: null
 
   # Any custom Ray resources to allocate per worker.
-  #custom_resources_per_worker: null
+  custom_resources_per_worker: null
 
   # Number of CPUs to allocate for the algorithm.
   # Note: this only takes effect when running in Tune. Otherwise, the algorithm runs in the main program (driver).
-  #num_cpus_for_local_worker: null
+  num_cpus_for_local_worker: null
 
   # Any custom Ray resources to allocate per worker.
-  #custom_resources_per_worker: null
+  custom_resources_per_worker: null
 
   # The strategy for the placement group factory returned by Algorithm.default_resource_request().
   # A PlacementGroup defines, which devices (resources) should always be co-located on the same node.
@@ -457,4 +457,4 @@ resources:
   # “SPREAD”: Places bundles across distinct nodes as even as possible.
   # “STRICT_PACK”: Packs bundles into one node. The group is not allowed to span multiple nodes.
   # “STRICT_SPREAD”: Packs bundles across distinct nodes.
-  #placement_strategy: null
+  placement_strategy: SPREAD

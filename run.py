@@ -14,6 +14,7 @@ log.basicConfig(level=log.DEBUG)
 
 if __name__ == "__main__":
 
+
     #To call the function I wan to use the following command: python run.py -clean --simdir="" --logdir=""
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-cleanrun", action="store_true", help="Runs without loading the previous simulation")
@@ -23,7 +24,19 @@ if __name__ == "__main__":
     argparser.add_argument("--config", type=str, help="Path to config file")
     argparser.add_argument("--simfreq", type=int, help="Simulation frequency")
     argparser.add_argument("--checkfreq", type=int, help="Checkpoint frequency")
+    argparser.add_argument("-configIsDict", action="store_true", help="Config is a dictionary")
+    argparser.add_argument("-oldImplementation", action="store_true", help="Uses old implementation of Trainers")
+
     args = argparser.parse_args()
+
+    #flush gpu memory
+
+    old_implementation = args.oldImplementation
+
+    import torch 
+    torch.cuda.empty_cache()
+
+    is_dict = args.configIsDict   
 
     if(args.simfreq is not None):
         simulation_frequency = args.simfreq
@@ -66,21 +79,41 @@ if __name__ == "__main__":
 
 
     config = loader.load_config(config)
-
+    
     if(not args.caps):
         log.info('Running without CAPS regularization')
-        Trainer = PPOTrainer
+
+        Trainer = PPOConfig
+        if(old_implementation):
+
+            Trainer = PPOTrainer
     else:
         log.info('Running with CAPS regularization')
-        Trainer = PPOCAPSTrainer
+        Trainer = PPOCAPSConfig
+        if(old_implementation):
+            Trainer = PPOCAPSTrainer
 
     if(not clean_run):
         checkpoint_path = loader.find_checkpoint(Trainer.__name__)
-        weights = loader.recover_weights(Trainer, checkpoint_path, config)
+        weights = loader.recover_weights(Trainer, checkpoint_path, config,old_implementation=old_implementation)
 
-    
-    trainer = Trainer(config=config, env="cassie-v0")
-    print(weights.keys() == trainer.get_policy().get_weights().keys())
+            
+    if(is_dict):
+        if(not old_implementation):
+            trainer = Trainer().from_dict(config)
+        else:
+            trainer = Trainer(config=config,env="cassie-v0")
+        log.info("dict config")
+    else: 
+        splitted = loader.split_config(config)
+        if(not old_implementation):
+            trainer = Trainer().environment(**splitted.get("environment",{})).rollouts(**splitted.get("rollouts",{})).checkpointing(**splitted.get("checkpointing",{})).debugging(**splitted.get("debugging",{})).training(**splitted.get("training",{})).framework(**splitted.get("framework",{})).resources(**splitted.get("resources",{})).evaluation(**splitted.get("evaluation",{})).build()
+        else: 
+            #combine all splitted into one dictionary
+            combined = {**splitted.get("environment",{}), **splitted.get("rollouts",{}), **splitted.get("checkpointing",{}), **splitted.get("debugging",{}), **splitted.get("training",{}), **splitted.get("framework",{}), **splitted.get("resources",{}), **splitted.get("evaluation",{})}
+            trainer = Trainer(config=combined,env="cassie-v0")
+            log.info("generalised config")
+
     if(not clean_run and weights is not None):
         if(checkpoint_path is not None and weights.keys() == trainer.get_policy().get_weights().keys()) :
     

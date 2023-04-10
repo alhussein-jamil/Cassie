@@ -1,14 +1,9 @@
 
 framework: tf2
-
-# Enable tracing in eager mode. This greatly improves performance (speedup ~2x), 
-# but makes it slightly harder to debug since Python code won’t be evaluated after the initial eager pass. 
-# Only possible if framework=tf2.
 eager_tracing: true
-
 log_level: WARN
 num_gpus: 1
-num_workers: 20
+num_workers: 10
 num_envs_per_worker: 1
 rollout_fragment_length: auto
 train_batch_size: 50000
@@ -28,17 +23,10 @@ clip_param: 0.4
 batch_mode: truncate_episodes
 reuse_actors: true
 disable_env_checking: true
-num_gpus_per_worker: 0.05
-num_cpus_per_worker: 1
+num_gpus_per_worker: 0.1
+num_cpus_per_worker: 2
 evaluation_interval: 2
 evaluation_num_episodes: 10
 evaluation_config:
   env: cassie-v0
   seed: 1234
-# If True, RLlib will learn entirely inside a normalized action space (0.0 centered with small stddev; only affecting Box components).
-# We will unsquash actions (and clip, just in case) to the bounds of the env’s action space before sending actions back to the env.
-normalize_actions: true
-
-# If True, RLlib will clip actions according to the env’s bounds before sending them back to the env.
-# TODO: (sven) This option should be deprecated and always be False.
-clip_actions: true

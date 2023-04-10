@@ -24,7 +24,7 @@ class CassieEnv(MujocoEnv):
     def __init__(self,config,  **kwargs):
         utils.EzPickle.__init__(self, config, **kwargs)
         self._terminate_when_unhealthy = config.get("terminate_when_unhealthy", True)
-        self._healthy_z_range = config.get("healthy_z_range", (0.35, 2.0))
+        self._healthy_z_range = config.get("healthy_z_range", (0.2, 2.0))
  
         # create the action space using the actuator ranges
         low = [c.actuator_ranges[key][0] for key in c.actuator_ranges.keys()]
@@ -188,7 +188,7 @@ class CassieEnv(MujocoEnv):
     
     #step in time
     def step(self, action):
-        #clip the action to the ranges in action_space
+        #clip the action to the ranges in action_space (done inside the config that's why removed)
         #action = np.clip(action, self.action_space.low, self.action_space.high)
 
         self.do_simulation(action, self.frame_skip)

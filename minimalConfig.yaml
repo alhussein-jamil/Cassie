@@ -2,10 +2,6 @@
 training: 
 
 
-  # Float specifying the discount factor of the Markov Decision process.
-  gamma: 0.99
-  # The default learning rate.
-  lr: 0.001
   # Training batch size, if applicable.
   train_batch_size: 30000
 
@@ -14,49 +10,13 @@ training:
   model:
     fcnet_hiddens: [256, 256]
     fcnet_activation: swish
-    vf_share_layers: false
-    free_log_std: true
-  # Arguments to pass to the policy optimizer.
-  optimizer: 
-    type: adam
-    eps: 1e-08
 
-  #PPO-specific config
-
-
-  # use_critic – Should use a critic as a baseline (otherwise don’t use value baseline; required for using GAE).
-  use_critic: true
-
-  # use_gae – If true, use the Generalized Advantage Estimator (GAE) with a value function, see https://arxiv.org/pdf/1506.02438.pdf.
-  use_gae: true
-
-  # lambda – The GAE (lambda) parameter.
-  lambda_: 0.95
-
-  # kl_coeff – Initial coefficient for KL divergence.
-  kl_coeff: 0.2
 
   # sgd_minibatch_size – Total SGD batch size across all devices for SGD. This defines the minibatch size within each epoch.
   sgd_minibatch_size: 5000
 
   # num_sgd_iter – Number of SGD iterations in each outer loop (i.e., number of epochs to execute per train batch).
   num_sgd_iter: 6
-
-  # shuffle_sequences – Whether to shuffle sequences in the batch when training (recommended).
-  shuffle_sequences: true
-
-  # vf_loss_coeff – Coefficient of the value function loss. IMPORTANT: you must tune this if you set vf_share_layers=True inside your model’s config.
-  vf_loss_coeff: 0.5
-
-  # entropy_coeff – Coefficient of the entropy regularizer.
-  entropy_coeff: 0.01
-
-  # clip_param – PPO clip parameter.
-  clip_param: 0.2
-
-  # kl_target – Target value for KL divergence.
-  kl_target: 0.01
-
 
 
 
@@ -79,7 +39,7 @@ framework:
 
 
   # TensorFlow (static-graph); tf2: TensorFlow 2.x (eager or traced, if eager_tracing=True); torch: PyTorch
-  framework: torch
+  framework: tf2
 
   # Enable tracing in eager mode. This greatly improves performance (speedup ~2x), 
   # but makes it slightly harder to debug since Python code won’t be evaluated after the initial eager pass. 
@@ -109,7 +69,7 @@ rollouts:
 
 
   # Element-wise observation filter, either “NoFilter” or “MeanStdFilter”.
-  observation_filter: MeanStdFilter  
+  observation_filter: NoFilter  
 
   
 
