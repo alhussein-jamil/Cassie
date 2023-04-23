@@ -42,9 +42,8 @@ while draw_state:
     draw_state = vis.draw(sim)
     vis.record_frame()
 
-    while time.monotonic() - t < 60*0.0005:
+    while time.monotonic() - t < 60 * 0.0005:
         time.sleep(0.0001)
     t = time.monotonic()
 
 vis.close_recording()
-

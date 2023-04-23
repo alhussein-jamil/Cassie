@@ -21,25 +21,29 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-def euler2quat(z=0, y=0, x=0):
 
-    z = z/2.0
-    y = y/2.0
-    x = x/2.0
+def euler2quat(z=0, y=0, x=0):
+    z = z / 2.0
+    y = y / 2.0
+    x = x / 2.0
     cz = math.cos(z)
     sz = math.sin(z)
     cy = math.cos(y)
     sy = math.sin(y)
     cx = math.cos(x)
     sx = math.sin(x)
-    result =  np.array([
-             cx*cy*cz - sx*sy*sz,
-             cx*sy*sz + cy*cz*sx,
-             cx*cz*sy - sx*cy*sz,
-             cx*cy*sz + sx*cz*sy])
+    result = np.array(
+        [
+            cx * cy * cz - sx * sy * sz,
+            cx * sy * sz + cy * cz * sx,
+            cx * cz * sy - sx * cy * sz,
+            cx * cy * sz + sx * cz * sy,
+        ]
+    )
     if result[0] < 0:
-    	result = -result
+        result = -result
     return result
+
 
 # Initialize cassie simulation
 sim = CassieSim("../model/cassie_depth.xml")
@@ -48,7 +52,7 @@ visd = CassieVis(sim, offscreen=True)
 width = 300
 height = 300
 visd.window_resize(width, height)
-visd.attach_cam(cam_name='egocentric')
+visd.attach_cam(cam_name="egocentric")
 visd.init_depth(width, height)
 
 # Set control parameters
@@ -76,7 +80,7 @@ rfoot_body_quat = np.zeros(4)
 pel_vel = np.zeros(6)
 count = 0
 
-while draw_state:# and draw_state2:
+while draw_state:  # and draw_state2:
     if not vis.ispaused():
         for i in range(60):
             y = sim.step_pd(u)
@@ -108,14 +112,15 @@ while draw_state:# and draw_state2:
     draw_state = vis.draw(sim)
     visd.draw(sim)
     depth_ptr = visd.draw_depth(sim, width=width, height=height)
-    depth = np.ctypeslib.as_array(depth_ptr, shape=(width*height,)).reshape((1,1,width,height))
+    depth = np.ctypeslib.as_array(depth_ptr, shape=(width * height,)).reshape(
+        (1, 1, width, height)
+    )
     # print(min(depth), max(depth))
     # plt.imshow(np.flip(depth[0,0,:,:],0), cmap='hot', interpolation='nearest')
     # plt.show()
     # plt.savefig('./figs/img_{}.png'.format(count))
     count += 1
 
-    while time.monotonic() - t < 60*0.0005:
+    while time.monotonic() - t < 60 * 0.0005:
         time.sleep(0.0001)
     t = time.monotonic()
-

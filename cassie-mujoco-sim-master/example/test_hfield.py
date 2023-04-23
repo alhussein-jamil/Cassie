@@ -38,20 +38,19 @@ nrows = sim.get_hfield_nrow()
 ncols = sim.get_hfield_ncol()
 rand_hdata = np.random.random((nrows, ncols))
 # Set middle of hfield (where Cassie starts) to be flat
-rand_hdata[nrows//2-5:nrows//2 + 5, ncols//2-5:ncols//2+5] = 0
+rand_hdata[nrows // 2 - 5 : nrows // 2 + 5, ncols // 2 - 5 : ncols // 2 + 5] = 0
 sim.set_hfield_data(rand_hdata.flatten(), vis.v)
 
 # Run until window is closed or vis is quit
 draw_state = vis.draw(sim)
 
-while draw_state:# and draw_state2:
+while draw_state:  # and draw_state2:
     if not vis.ispaused():
         for i in range(60):
             y = sim.step_pd(u)
 
     draw_state = vis.draw(sim)
 
-    while time.monotonic() - t < 60*0.0005:
+    while time.monotonic() - t < 60 * 0.0005:
         time.sleep(0.0001)
     t = time.monotonic()
-

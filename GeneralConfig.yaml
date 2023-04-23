@@ -19,7 +19,7 @@ training:
   # Arguments to pass to the policy optimizer.
   optimizer: 
     type: adam
-    eps: 1e-08
+    # eps: 1e-08
 
   #PPO-specific config
   # lr_schedule – Learning rate schedule. In the format of [[timestep, lr-value], [timestep, lr-value], …] Intermediary timesteps will be assigned to interpolated learning rate values. A schedule should normally start from timestep 0.
@@ -57,10 +57,10 @@ training:
   entropy_coeff_schedule: null
 
   # clip_param – PPO clip parameter.
-  clip_param: 0.2
+  clip_param: 0.3
 
   # vf_clip_param – Clip param for the value function. Note that this is sensitive to the scale of the rewards. If your expected V is large, increase this.
-  vf_clip_param: 10
+  vf_clip_param: 1000
 
   # grad_clip – If specified, clip the global norm of gradients by this amount.
   grad_clip: 100
@@ -122,7 +122,7 @@ environment:
 
   # If True, RLlib will clip actions according to the env’s bounds before sending them back to the env.
   # TODO: (sven) This option should be deprecated and always be False.
-  clip_actions: true
+  clip_actions: false
 
   # If True, disable the environment pre-checking module.
   disable_env_checking: true
@@ -158,8 +158,8 @@ framework:
   # Configures TF for single-process operation by default.
   tf_session_args:
     gpu_options: 
-      allow_growth: null
-    allow_soft_placement: null
+      allow_growth: true
+    allow_soft_placement: true
 
   # Override the following tf session args on the local worker.
   local_tf_session_args:
@@ -254,7 +254,7 @@ rollouts:
 
   # Whether to use “rllib” or “deepmind” preprocessors by default. Set to None for using no preprocessor.
   # In this case, the model will have to handle possibly complex observations from the environment.
-  preprocessor_pref: rllib  
+  # preprocessor_pref: rllib  
 
   # Element-wise observation filter, either “NoFilter” or “MeanStdFilter”.
   observation_filter: MeanStdFilter  
@@ -263,23 +263,23 @@ rollouts:
   #synchronize_filter: True  
 
   # Whether to LZ4 compress individual observations in the SampleBatches collected during rollouts.
-  compress_observations: null  
+  compress_observations: true  
 
   # Explicitly tells the rollout worker to enable TF eager execution. This is useful for example when framework is “torch”,
   # but a TF2 policy needs to be restored for evaluation or league-based purposes.
-  enable_tf1_exec_eagerly: null  
+  # enable_tf1_exec_eagerly: null  
 
   # If specified, perf stats are in EMAs. This is the coeff of how much new data points contribute to the averages.
   # Default is None, which uses simple global average instead.
   # The EMA update rule is: updated = (1 - ema_coef) * old + ema_coef * new
-  sampler_perf_stats_ema_coef: null  
+  # sampler_perf_stats_ema_coef: null  
 
   # Max amount of time we should spend waiting for health probe calls to finish.
   # Health pings are very cheap, so the default is 1 minute.
-  worker_health_probe_timeout_s: null  
+  # worker_health_probe_timeout_s: null  
 
   # Max amount of time we should wait to restore states on recovered worker actors. Default is 30 mins.
-  worker_restore_timeout_s: null  
+  # worker_restore_timeout_s: null  
 
 evaluation: 
   # Evaluate with every evaluation_interval training iterations.
@@ -295,26 +295,26 @@ evaluation:
   # - For evaluation_parallel_to_training=True: Will run as many episodes/timesteps that fit into the (parallel) training step.
   # - For evaluation_parallel_to_training=False: Error.
   evaluation_duration: 10
-  evaluation_duration_unit: "episodes"
+  # evaluation_duration_unit: "episodes"
 
   # The timeout (in seconds) for the ray.get call to the remote evaluation worker(s) sample() method.
   # After this time, the user will receive a warning and instructions on how to fix the issue.
   # This could be either to make sure the episode ends, increasing the timeout, or switching to evaluation_duration_unit=timesteps.
-  evaluation_sample_timeout_s: null
+  # evaluation_sample_timeout_s: null
 
   # Whether to run evaluation in parallel to a Algorithm.train() call using threading.
   # Default=False.
   # E.g. evaluation_interval=2 -> For every other training iteration, the Algorithm.train() and Algorithm.evaluate() calls run in parallel.
   # Note: This is experimental.
   # Possible pitfalls could be race conditions for weight synching at the beginning of the evaluation loop.
-  evaluation_parallel_to_training: False
+  # evaluation_parallel_to_training: False
 
   # Typical usage is to pass extra args to evaluation env creator and to disable exploration by computing deterministic actions.
   # IMPORTANT NOTE: Policy gradient algorithms are able to find the optimal policy, even if this is a stochastic one.
   # Setting "explore=False" here will result in the evaluation workers not using this optimal policy!
-  evaluation_config:
-    explore: False
-    extra_args: {}
+  # evaluation_config:
+  #   explore: False
+  #   extra_args: {}
       
   # Specify how to evaluate the current policy, along with any optional config parameters.
   # This only has an effect when reading offline experiences ("input" is not "sampler").
@@ -346,16 +346,16 @@ evaluation:
   # This must be a function of signature (algo: Algorithm, eval_workers: WorkerSet) -> metrics: dict.
   # See the Algorithm.evaluate() method to see the default implementation.
   # The Algorithm guarantees all eval workers have the latest policy state before this function is called.
-  custom_evaluation_function: null
+  # custom_evaluation_function: null
 
   # Make sure the latest available evaluation results are always attached to a step result dict.
   # This may be useful if Tune or some other meta controller needs access to evaluation metrics all the time.
-  always_attach_evaluation_results: null
+  # always_attach_evaluation_results: null
 
   # If True, use an AsyncRequestsManager for the evaluation workers and use this manager
   # to send sample() requests to the evaluation workers. This way, the Algorithm becomes
   # more robust against long running episodes and/or failing (and restarting) workers.
-  enable_async_evaluation: null 
+  # enable_async_evaluation: null 
 
 checkpointing: 
   # Whether to include (tf or torch) native model files in the individual Policy or Algorithm checkpoints.
@@ -366,22 +366,22 @@ checkpointing:
   # Whether to add only the trainable Policies to the Algorithm checkpoint.
   # This is determined by the is_trainable_policy callable of the local worker.
   # These Policies are added to the sub-directory "policies/" in the Algorithm checkpoint.
-  checkpoint_trainable_policies_only: null
+  # checkpoint_trainable_policies_only: null
 
 debugging: 
 
   # Callable that creates a ray.tune.Logger object. If unspecified, a default logger is created.
-  logger_creator: null
+  # logger_creator: null
 
   # Define logger-specific configuration to be used inside Logger.
   # Default value None allows overwriting with nested dicts.
-  logger_config: null
+  # logger_config: null
 
   # Set the ray.rllib.* log level for the agent process and its workers.
   # Should be one of DEBUG, INFO, WARN, or ERROR.
   # The DEBUG level will also periodically print out summaries of relevant internal dataflow (this is also printed out once at startup at the INFO level).
   # When using the rllib train command, you can also use the -v and -vv flags as shorthand for INFO and DEBUG.
-  log_level: null
+  # log_level: null
 
   # Log system resource metrics to results.
   # This requires psutil to be installed for sys stats, and gputil for GPU metrics.
@@ -396,10 +396,10 @@ debugging:
   # Use a custom RolloutWorker type for unit testing purpose.
   #worker_cls: null
 
-callbacks:
-  # Callbacks class, whose methods will be run during various phases of training and environment sample collection.
-  # See the DefaultCallbacks class and examples/custom_metrics_and_callbacks.py for more usage information.
-  callbacks_class: null
+  # callbacks:
+  #   # Callbacks class, whose methods will be run during various phases of training and environment sample collection.
+  #   # See the DefaultCallbacks class and examples/custom_metrics_and_callbacks.py for more usage information.
+  #   callbacks_class: null
 
 resources: 
   # Number of GPUs to allocate to the algorithm process.

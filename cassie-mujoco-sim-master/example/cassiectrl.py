@@ -17,12 +17,14 @@
 from cassiemujoco import *
 import time
 
+
 # Null controller
 def controller(y):
     return pd_in_t()
 
+
 # Set up UDP connection
-cassie = CassieUdp(remote_addr='127.0.0.1')
+cassie = CassieUdp(remote_addr="127.0.0.1")
 
 received_data = False
 
@@ -30,21 +32,24 @@ received_data = False
 while True:
     if not received_data:
         # Send packets until the simulator responds
-        print('Connecting...')
+        print("Connecting...")
         y = None
         while y is None:
             cassie.send_pd(pd_in_t())
             time.sleep(0.001)
             y = cassie.recv_newest_pd()
         received_data = True
-        print('Connected!\n')
+        print("Connected!\n")
     else:
         # Wait for new data
         y = cassie.recv_wait_pd()
 
     # Print connection stats
-    print('\033[F\033[Jdelay: {}, diff: {}'.format(cassie.delay(),
-                                                   cassie.seq_num_in_diff()))
+    print(
+        "\033[F\033[Jdelay: {}, diff: {}".format(
+            cassie.delay(), cassie.seq_num_in_diff()
+        )
+    )
 
     # Run controller
     u = controller(y)

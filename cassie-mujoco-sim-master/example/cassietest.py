@@ -43,14 +43,13 @@ t = time.monotonic()
 
 # Run until window is closed or vis is quit
 draw_state = vis.draw(sim)
-while draw_state:# and draw_state2:
+while draw_state:  # and draw_state2:
     if not vis.ispaused():
         for i in range(60):
             y = sim.step_pd(u)
 
     draw_state = vis.draw(sim)
 
-    while time.monotonic() - t < 60*0.0005:
+    while time.monotonic() - t < 60 * 0.0005:
         time.sleep(0.0001)
     t = time.monotonic()
-
