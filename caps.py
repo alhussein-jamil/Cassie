@@ -56,10 +56,11 @@ class CAPSTorchPolicy(PPOTorchPolicy):
 
         L_S = torch.mean(torch.mean(torch.abs(logits-logits_around),axis=1))
         L_T = torch.mean(f.action_dist(actions[1:,:],actions[:-1,:]))
-        loss = loss.to(c.device)
+
         # add the loss of the state around the observations to the loss
-        loss += CAPSTorchPolicy.lambda_s * L_S.to(c.device)
-        loss += CAPSTorchPolicy.lambda_t * L_T.to(c.device)
+        loss += CAPSTorchPolicy.lambda_s * L_S
+        loss += CAPSTorchPolicy.lambda_t * L_T
+        
         return loss
 
 

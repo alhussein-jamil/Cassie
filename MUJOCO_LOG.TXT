@@ -1,0 +1,3 @@
+Sun Apr 23 11:29:37 2023
+WARNING: mju_openResource: unknown file 'C:\Users\Ajvendetta/.mujoco/mjpro150/model/humanoid.xml'
+

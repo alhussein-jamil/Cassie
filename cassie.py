@@ -24,12 +24,12 @@ class CassieEnv(MujocoEnv):
     def __init__(self,config,  **kwargs):
         utils.EzPickle.__init__(self, config, **kwargs)
         self._terminate_when_unhealthy = config.get("terminate_when_unhealthy", True)
-        self._healthy_z_range = config.get("healthy_z_range", (0.2, 2.0))
+        self._healthy_z_range = config.get("healthy_z_range", (0.35, 2.0))
  
         # create the action space using the actuator ranges
         low = [c.actuator_ranges[key][0] for key in c.actuator_ranges.keys()]
         high = [c.actuator_ranges[key][1] for key in c.actuator_ranges.keys()]
-        self.action_space = gym.spaces.Box(np.array(low), np.array(high))
+        self.action_space = gym.spaces.Box(np.float32(np.array(low)), np.float32(np.array(high)))
         self._reset_noise_scale = config.get("reset_noise_scale", 1e-2)
         self.phi = 0
         self.steps =0
@@ -43,9 +43,9 @@ class CassieEnv(MujocoEnv):
         self.gamma = config.get("gamma",0.99)
         self.gamma_modified = 1
         self.rewards = {"R_biped":0,"R_cmd":0,"R_smooth":0}
-        self.observation_space = Box(low=np.array(low), high=np.array(high), shape=(25,))
+        self.observation_space = Box(low=np.float32(np.array(low)), high=np.float32(np.array(high)), shape=(25,))
 
-        MujocoEnv.__init__(self, config.get("model_path","/home/ajvendetta/Downloads/Cassie-main/cassie-mujoco-sim-master/model/cassie.xml"),20 ,render_mode=config.get("render_mode",None), observation_space=self.observation_space,  **kwargs)
+        MujocoEnv.__init__(self, config.get("model_path","/home/alhussein.jamil/Cassie/cassie-mujoco-sim-master/model/cassie.xml"),20 ,render_mode=config.get("render_mode",None), observation_space=self.observation_space,  **kwargs)
         #set the camera settings to match the DEFAULT_CAMERA_CONFIG we defined above
 
 
@@ -58,8 +58,8 @@ class CassieEnv(MujocoEnv):
     @property
     def is_healthy(self):
         min_z, max_z = self._healthy_z_range
-        is_healthy = min_z < self.data.qpos[2] < max_z
-
+        #it is healthy if in range and one of the feet is on the ground
+        is_healthy = min_z < self.data.qpos[2] < max_z 
         return is_healthy
 
     @property
@@ -116,8 +116,6 @@ class CassieEnv(MujocoEnv):
 		''' 
         qvel = self.data.qvel.flat.copy()
 
-
-
         return np.concatenate([qpos[c.pos_index], qvel[c.vel_index]])
     
     #computes the reward
@@ -126,12 +124,12 @@ class CassieEnv(MujocoEnv):
         # Extract some proxies
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
+
         pos_index = np.array([1,2,3,4,5,6,7,8,9,14,15,16,20,21,22,23,28,29,30,34])
         vel_index = np.array([0,1,2,3,4,5,6,7,8,12,13,14,18,19,20,21,25,26,27,31])
         
         qpos = qpos[pos_index]
         qvel=qvel[vel_index]
-
 
         #Feet Contact Forces 
         contact_force_right_foot = np.zeros(6)
@@ -166,7 +164,7 @@ class CassieEnv(MujocoEnv):
         C_spd = lambda phi :  c.c_swing_spd * I_swing_spd(phi) + c.c_stance_spd * I_stance_spd(phi)
         
 
-        R_cmd = - 1.0*q_vx - 1.0*q_vy - 1.0*q_orientation #- 1.0*q_vz
+        R_cmd = - 1.0*q_vx - 1.0*q_vy - 1.0*q_orientation - 0.5*q_vz
         R_smooth = -1.0*q_action_diff - 1.0* q_torque - 1.0*q_pelvis_acc
         R_biped = 0
         R_biped += C_frc(self.phi+c.THETA_LEFT) * q_left_frc
@@ -176,7 +174,7 @@ class CassieEnv(MujocoEnv):
 
 
 
-        reward = 2  + 0.5 * R_biped  +  0.375* R_cmd +  0.125* R_smooth
+        reward = 4 + 0.5 * R_biped  +  0.375* R_cmd +  0.125* R_smooth
         
         self.used_quantities = {"C_frc_left":C_frc(self.phi+c.THETA_LEFT),"C_frc_right":C_frc(self.phi+c.THETA_RIGHT),"C_spd_left":C_spd(self.phi+c.THETA_LEFT),"C_spd_right":C_spd(self.phi+c.THETA_RIGHT),'q_vx':q_vx,'q_vy':q_vy,'q_vz':q_vz,'q_left_frc':q_left_frc,'q_right_frc':q_right_frc,'q_left_spd':q_left_spd,'q_right_spd':q_right_spd,'q_action_diff':q_action_diff,'q_orientation':q_orientation,'q_torque':q_torque,'q_pelvis_acc':q_pelvis_acc,'R_cmd':R_cmd,'R_smooth':R_smooth,'R_biped':R_biped}
 
@@ -189,7 +187,7 @@ class CassieEnv(MujocoEnv):
     #step in time
     def step(self, action):
         #clip the action to the ranges in action_space (done inside the config that's why removed)
-        #action = np.clip(action, self.action_space.low, self.action_space.high)
+        action = np.clip(action, self.action_space.low, self.action_space.high)
 
         self.do_simulation(action, self.frame_skip)
 
@@ -206,11 +204,11 @@ class CassieEnv(MujocoEnv):
         self.previous_action = action 
 
         self.gamma_modified *= self.gamma
+        
         return observation, reward, terminated, False, {}
 
     #resets the simulation
     def reset_model(self):
-
         m.mj_inverse(self.model, self.data)
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale

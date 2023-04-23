@@ -21,8 +21,8 @@ class Loader():
 
 
         #copy caps.py to ray/rllib/algorithms
-        shutil.copy2("caps.py", "/home/ajvendetta/.pyenv/versions/cassie/lib/python3.8/site-packages/ray/rllib/algorithms/")
-        shutil.copy2("caps.py", "/home/ajvendetta/miniconda3/lib/python3.8/site-packages/ray/rllib/algorithms/")
+        shutil.copy2("caps.py", "/home/alhussein.jamil/.pyenv/versions/rl_sandbox/lib/python3.8/site-packages/ray/rllib/algorithms/")
+        #shutil.copy2("caps.py", "/home/ajvendetta/miniconda3/lib/python3.8/site-packages/ray/rllib/algorithms/")
         # register the policy
         POLICIES["CAPSTorchPolicy"] = "caps"
 

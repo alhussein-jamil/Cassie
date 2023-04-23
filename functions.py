@@ -16,14 +16,10 @@ def p_between_von_mises(a, b, kappa, x):
  #
 import torch 
 def action_dist(a,b):
-
-    if(a.device == torch.device('cpu') or b.device == torch.device('cpu')):
-        a = a.to(c.device)
-        b = b.to(c.device)
         
     diff = a-b
 
-    diff= torch.div(diff,(c.act_ranges[:,1]-c.act_ranges[:,0]))
+    diff= torch.div(torch.tensor(diff),torch.tensor(c.act_ranges[:,1]-c.act_ranges[:,0]))
     diff = torch.sum(torch.square(diff),axis=1)
 
     return torch.sqrt(diff)

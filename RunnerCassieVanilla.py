@@ -82,6 +82,7 @@ class CassieEnv(MujocoEnv):
 
 
     def __init__(self,config,  **kwargs):
+        
         utils.EzPickle.__init__(self, config, **kwargs)
 
         self._forward_reward_weight = config.get("forward_reward_weight", 1.25)

@@ -7,14 +7,14 @@ THETA_LEFT = 0.5
 THETA_RIGHT = 0
 MAX_STEPS = 1000
 OMEGA = 100 
-STEPS_IN_CYCLE= 35 
+STEPS_IN_CYCLE=  100
 a_swing = 0 
 b_swing = 0.5
 a_stance = 0.5
 b_stance = 1
 FORWARD_QUARTERNIONS = np.array([1, 0, 0, 0])
 KAPPA = 25
-X_VEL = 0.3
+X_VEL = 1
 Y_VEL = 0
 Z_VEL = 0
 c_swing_frc = -1 
@@ -68,9 +68,8 @@ sensor_ranges = {
 #transform the actuator_ranges to a 2d tensor
 import torch 
 act_ranges = torch.tensor(list(actuator_ranges.values()))
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-act_ranges = act_ranges.to(device)
+act_ranges = act_ranges
 
 
 pos_index = np.array([1,2,3,4,5,6,7,8,9,14,15,16,20,21,22,23,28,29,30,34])
