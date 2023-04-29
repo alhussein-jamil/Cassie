@@ -1,33 +1,48 @@
+from ray.tune.logger import UnifiedLogger
+from ray.tune.logger import UnifiedLogger
 from ray.rllib.agents.ppo import PPOTrainer
 from loader import Loader
-import cv2
+import mediapy as media
 import os
-from cassie import CassieEnv
+from cassie import CassieEnv, MyCallbacks
 from ray.tune.registry import register_env
 import argparse
 from caps import *
 import logging as log
-import shutil
-from ray.rllib.algorithms.registry import POLICIES
+import ray
 
 log.basicConfig(level=log.DEBUG)
 
+
+
 if __name__ == "__main__":
-    # To call the function I wan to use the following command: python run.py -clean --simdir="" --logdir=""
+    # To call the function I wan to use the following command: python run.py
+    # -clean --simdir="" --logdir=""
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
         "-cleanrun",
         action="store_true",
         help="Runs without loading the previous simulation",
     )
-    argparser.add_argument("-simdir", "--simdir", type=str, help="Simulation directory")
-    argparser.add_argument("-logdir", "--logdir", type=str, help="Log directory")
+    argparser.add_argument(
+        "-simdir",
+        "--simdir",
+        type=str,
+        help="Simulation directory")
+    argparser.add_argument(
+        "-logdir",
+        "--logdir",
+        type=str,
+        help="Log directory")
     argparser.add_argument(
         "-caps", action="store_true", help="Uses CAPS regularization"
     )
     argparser.add_argument("--config", type=str, help="Path to config file")
     argparser.add_argument("--simfreq", type=int, help="Simulation frequency")
-    argparser.add_argument("--checkfreq", type=int, help="Checkpoint frequency")
+    argparser.add_argument(
+        "--checkfreq",
+        type=int,
+        help="Checkpoint frequency")
     argparser.add_argument(
         "-configIsDict", action="store_true", help="Config is a dictionary"
     )
@@ -48,7 +63,7 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
 
     is_dict = args.configIsDict
-
+    ray.init(ignore_reinit_error=True,num_gpus=1)
     if args.simfreq is not None:
         simulation_frequency = args.simfreq
         log.info("Simulation frequency: {}".format(simulation_frequency))
@@ -75,7 +90,7 @@ if __name__ == "__main__":
     if args.logdir is not None:
         log_dir = args.logdir
     else:
-        log_dir = "/home/ajvendetta/ray_results"
+        log_dir = "C:/Users/Ajvendetta/ray_results"
 
     log.info("Log directory: {}".format(log_dir))
     log.info(os.path.exists(log_dir))
@@ -103,15 +118,22 @@ if __name__ == "__main__":
 
     if not clean_run:
         checkpoint_path = loader.find_checkpoint(Trainer.__name__)
-        weights = loader.recover_weights(
-            Trainer, checkpoint_path, config, old_implementation=old_implementation
-        )
+
+        # weights = loader.recover_weights(
+        #     Trainer,
+        #     checkpoint_path,
+        #     config,
+        #     old_implementation=old_implementation)
 
     if is_dict:
         if not old_implementation:
             trainer = Trainer().from_dict(config)
         else:
-            trainer = Trainer(config=config, env="cassie-v0")
+            trainer = Trainer(
+                config=config,
+                env="cassie-v0",
+                logger_creator=lambda config: UnifiedLogger(config, log_dir),
+            )
         log.info("dict config")
     else:
         splitted = loader.split_config(config)
@@ -140,19 +162,21 @@ if __name__ == "__main__":
                 **splitted.get("resources", {}),
                 **splitted.get("evaluation", {}),
             }
+            combined["callbacks"] = MyCallbacks
             trainer = Trainer(config=combined, env="cassie-v0")
             log.info("generalised config")
 
-    if not clean_run and weights is not None:
-        if (
-            checkpoint_path is not None
-            and weights.keys() == trainer.get_policy().get_weights().keys()
-        ):
-            trainer.get_policy().set_weights(weights)
-            print("Weights loaded successfully")
+    if not clean_run: #and weights is not None:
+        trainer.restore(checkpoint_path)
+        # if (
+        #     checkpoint_path is not None
+        #     and weights.keys() == trainer.get_policy().get_weights().keys()
+        # ):
+        #     trainer.load_checkpoint(checkpoint_path)
+        #     print("Weights loaded successfully")
 
     # Define video codec and framerate
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
     fps = 30
 
     # Training loop
@@ -178,7 +202,6 @@ if __name__ == "__main__":
     os.makedirs(test_dir, exist_ok=True)
 
     # Define video codec and framerate
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     fps = 30
 
     # Set initial iteration count
@@ -187,10 +210,14 @@ if __name__ == "__main__":
     while True:
         # Train for one iteration
         result = trainer.train()
+        #get the current filter params
         i += 1
         print(
-            "Episode Reward Mean for iteration {} is {}".format(
-                i, result["episode_reward_mean"]
+            "Episode {} Reward Mean {} Q_lef_frc {} Q_left_spd {}".format(
+                i,
+                result["episode_reward_mean"],
+                result["custom_metrics"]["custom_quantities_q_left_frc_mean"],
+                result["custom_metrics"]["custom_quantities_q_left_spd_mean"],
             )
         )
 
@@ -206,7 +233,7 @@ if __name__ == "__main__":
 
             # Run test
             video_path = os.path.join(test_dir, "sim_{}.mp4".format(i))
-
+            filterfn = trainer.workers.local_worker().filters["default_policy"]
             env.reset()
             obs = env.reset()[0]
             done = False
@@ -215,17 +242,14 @@ if __name__ == "__main__":
             while not done:
                 # Increment steps
                 steps += 1
+                obs = filterfn(obs)
                 action = trainer.compute_single_action(obs)
                 obs, _, done, _, _ = env.step(action)
                 frame = env.render()
                 frames.append(frame)
 
-            # Save frames as video
-            height, width, _ = frames[0].shape
-            video_writer = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
-            for frame in frames:
-                video_writer.write(frame)
-            video_writer.release()
+            # Save video
+            media.write_video(video_path, frames, fps=fps)
             print("Test saved at", video_path)
             # Increment test index
             max_test_i += 1

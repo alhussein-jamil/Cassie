@@ -1,29 +1,19 @@
+from ray.rllib.algorithms.ppo import PPOConfig
 import torch
-
 from ray.rllib.agents.ppo import PPOTrainer
 from ray.rllib.algorithms.ppo.ppo_torch_policy import PPOTorchPolicy
-
-import ray
-
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.policy.sample_batch import SampleBatch
-
-
 from ray.rllib.utils.typing import TensorType
-
-import constants as c
-
-import scipy.stats as stats
 from ray.rllib.models.torch.torch_action_dist import TorchDistributionWrapper
-
 from typing import Type, Union, List
 import functions as f
 
 
 class CAPSTorchPolicy(PPOTorchPolicy):
     sigma = 0.01
-    lambda_s = 1
+    lambda_s = 1000
     lambda_t = 1
 
     def __init__(self, observation_space, action_space, config):
@@ -68,9 +58,6 @@ class PPOCAPSTrainer(PPOTrainer, Algorithm):
 
     def get_default_policy_class(self, registry):
         return CAPSTorchPolicy
-
-
-from ray.rllib.algorithms.ppo import PPOConfig
 
 
 class PPOCAPSConfig(PPOConfig):
